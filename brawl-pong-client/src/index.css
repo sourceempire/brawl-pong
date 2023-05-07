@@ -1,0 +1,46 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: hsl(240, 20%, 17%);
+}
+
+
+body {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 100vw;
+  min-height: 100vh;
+}
+
+.game-field-wrapper {
+  position: relative;
+}
+
+.game-field-wrapper .game-field {
+  background-color: black;
+  border: 10px solid white;
+  border-radius: 5px;
+  border-left: 0;
+  border-right: 0;
+  
+}
+
+.player-info {
+  position: absolute;
+  top: 50%;
+  
+}
+
+.player-info.left {
+  translate: -100% -50%;
+  left: -12px;
+}
+
+.player-info.right {
+  translate: 100% -50%;
+  right: -12px;
+}

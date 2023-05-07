@@ -1,0 +1,72 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.8.10'
+    id 'com.github.node-gradle.node' version "4.0.0"
+    id 'application'
+}
+
+group = 'io.sourceempire'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'io.vertx:vertx-core:4.2.3'
+    implementation "io.vertx:vertx-lang-kotlin:4.2.3"
+
+    implementation 'io.vertx:vertx-web:4.2.3'
+    implementation 'io.vertx:vertx-web-client:4.2.3'
+    implementation 'io.vertx:vertx-web-common:4.2.3'
+
+    implementation 'io.vertx:vertx-sockjs-service-proxy:4.2.3'
+
+    implementation 'io.vertx:vertx-auth-jwt:4.2.3'
+
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.13.1"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1"
+
+    // Testing
+    testImplementation "io.vertx:vertx-junit5:4.2.3"
+
+    // testImplementation 'org.jetbrains.kotlin:kotlin-test'
+}
+
+task installPongDependencies(type: NpmTask) {
+    args = ['install']
+    workingDir = file('../brawl-pong-client')
+}
+
+task buildPong(type: NpmTask) {
+    dependsOn installPongDependencies
+    args = ['run', 'build']
+    workingDir = file('../brawl-pong-client')
+}
+
+task deleteOldDistFromResources(type: Delete) {
+    delete 'src/main/resources/static'
+}
+
+task movePongDistToResources(type: Copy) {
+    dependsOn buildPong, deleteOldDistFromResources
+    from '../brawl-pong-client/dist'
+    into 'src/main/resources/static'
+}
+
+processResources.dependsOn movePongDistToResources
+
+test {
+    useJUnitPlatform()
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = '1.8'
+}
+
+compileTestKotlin {
+    kotlinOptions.jvmTarget = '1.8'
+}
+
+application {
+    mainClassName = 'MainKt'
+}
