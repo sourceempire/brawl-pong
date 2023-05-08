@@ -5,13 +5,14 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.NetSocket
-import listeners.ScoreUpdateListener
+import listeners.MatchEventListener
 import models.CreateMatchEvent
 import models.Match
+import models.Player
 import models.ServerEvent
 import java.util.*
 
-interface ServerConnectionHandler: ScoreUpdateListener {
+interface ServerConnectionHandler: MatchEventListener {
     companion object {
         fun create(
             vertx: Vertx,
@@ -87,9 +88,27 @@ class ServerConnectionHandlerImpl(
             }
     }
 
-    override fun onPlayerScoreUpdate(match: Match, player: UUID) {
-        println("Match ${match.id} - Player 1: ${match.gameState.player1.score}, Player 2: ${match.gameState.player2.score}")
+    override fun onMatchCreated(match: Match) {
+        TODO("Not yet implemented")
+    }
 
+    override fun onPlayerConnected(match: Match, player: Player) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onPlayerDisconnected(match: Match, player: Player) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onPlayerReady(match: Match, player: Player) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onMatchStarted(match: Match) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onPlayerScored(match: Match, player: UUID) {
         this.socket.write(Json.encode(mapOf(
             "type" to "player-scored",
             "matchId" to match.id,
@@ -99,5 +118,9 @@ class ServerConnectionHandlerImpl(
                 match.gameState.player2.id to match.gameState.player2.score
             )
         )))
+    }
+
+    override fun onMatchEnded(match: Match) {
+        TODO("Not yet implemented")
     }
 }

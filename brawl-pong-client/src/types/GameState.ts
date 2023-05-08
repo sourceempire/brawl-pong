@@ -7,4 +7,6 @@ export type GameState = {
     player2: Player,
     ball: Ball,
     field: Field,
+    paused: boolean,
+    winner: string | null // UUID -> playerId
 }

@@ -1,10 +1,11 @@
 package handlers
 
+import exceptions.MatchAlreadyFinishedException
 import exceptions.MatchNotFoundException
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
-import listeners.ScoreUpdateListener
+import listeners.MatchEventListener
 import models.CreateMatchEvent
 import models.GameState
 import models.Match
@@ -24,12 +25,16 @@ interface MatchHandler {
     fun getMatchByPlayer2Socket(sockJSSocket: SockJSSocket): Match
     fun removeMatch(matchId: UUID): Match
     fun countdownAndStartMatch(matchId: UUID, duration: Long)
-    fun registerScoreUpdateListener(listener: ScoreUpdateListener)
+    fun registerMatchEventListener(listener: MatchEventListener)
+
 }
 
 class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     private val matches = mutableMapOf<UUID, Match>()
-    private val scoreUpdateListeners = mutableListOf<ScoreUpdateListener>()
+    private val authorizedMatches get() = matches.filter { it.value.requiresAuthorization }
+    private val unauthorizedMatches get() = matches.filter { !it.value.requiresAuthorization }
+
+    private val matchEventListeners = mutableListOf<MatchEventListener>()
 
     override fun createMatch(): Match {
         val matchId = UUID.randomUUID()
@@ -53,12 +58,10 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     }
 
     override fun getUnauthorizedMatch(matchId: UUID): Match {
-        val unauthorizedMatches = getMatchesByAuthorizationStatus(requiresAuthorization = false)
         return unauthorizedMatches[matchId] ?: throw MatchNotFoundException()
     }
 
     override fun getAuthorizedMatch(matchId: UUID): Match {
-        val authorizedMatches = getMatchesByAuthorizationStatus(requiresAuthorization = true)
         return authorizedMatches[matchId] ?: throw MatchNotFoundException()
     }
 
@@ -69,7 +72,6 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     }
 
     override fun getMatchByPlayer2Socket(sockJSSocket: SockJSSocket): Match {
-        val unauthorizedMatches = getMatchesByAuthorizationStatus(requiresAuthorization = false)
         return unauthorizedMatches.values.find { !it.gameState.player2.connected } ?: throw MatchNotFoundException()
     }
 
@@ -78,7 +80,7 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     }
 
     override fun countdownAndStartMatch(matchId: UUID, duration: Long) {
-        val match = getMatchById(matchId)?: return
+        val match = getMatchById(matchId)
 
         var remainingTime = duration
 
@@ -95,38 +97,67 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         }
     }
 
-    override fun registerScoreUpdateListener(listener: ScoreUpdateListener) {
-        scoreUpdateListeners.add(listener)
+    override fun registerMatchEventListener(listener: MatchEventListener) {
+        matchEventListeners.add(listener)
     }
 
-    private  fun startMatch(matchId: UUID) {
-        val match = getMatchById(matchId)?: return
+    private fun startMatch(matchId: UUID) {
+        val match = getMatchById(matchId)
+
+        if (match.gameState.winner != null) {
+            throw MatchAlreadyFinishedException()
+        }
+
+        // Set the paused state to false
+        match.gameState.paused = false
 
         // Start the game by enabling movement and updating game state
-        match.gameState.startMovement()
         match.dispatchGameState()
 
-        vertx.setPeriodic(1000L / match.tickRate) {
-            updateGameState(match)
+        vertx.setPeriodic(1000L / match.tickRate) { timerId ->
+            if (match.gameState.paused) {
+                // Cancel the timer when the game is paused
+                match.dispatchGameState()
+                vertx.cancelTimer(timerId)
+            } else {
+                updateGameState(match)
+            }
         }
     }
 
-    private fun notifyScoreUpdate(match: Match, player: UUID) {
-        if (match.requiresAuthorization) {
-            scoreUpdateListeners.forEach { it.onPlayerScoreUpdate(match, player) }
+    private fun unpauseMatch(matchId: UUID) {
+        startMatch(matchId)
+    }
+
+    private fun pauseMatch(matchId: UUID) {
+        val match = getMatchById(matchId)
+        match.gameState.paused = true
+        match.dispatchGameState()
+    }
+
+    private fun onScore(match: Match, player: UUID) {
+        invokeEventListenersIfAuthorized(match) {
+            it.onPlayerScored(match, player)
+        }
+
+        match.checkForWinner {
+            invokeEventListenersIfAuthorized(match) {
+                it.onMatchEnded(match)
+            }
         }
     }
+
 
     private fun updateGameState(match: Match) {
         updatePlayerPositions(match)
-        updateBallPosition(match, ::notifyScoreUpdate)
+        updateBallPosition(match, ::onScore)
         handlePaddleCollisions(match)
         handleWallCollisions(match)
     }
 
-    private fun getMatchesByAuthorizationStatus(requiresAuthorization: Boolean): Map<UUID, Match> {
-        return matches.filter { it.value.requiresAuthorization == requiresAuthorization }
+    private fun invokeEventListenersIfAuthorized(match: Match, event: (MatchEventListener) -> Unit) {
+        if (match.requiresAuthorization) {
+            matchEventListeners.forEach(event)
+        }
     }
-
-
 }

@@ -42,6 +42,7 @@ export const usePrediction = (
       predictedGameStateRef.current = { ...gameState };
       drawGameState(predictedGameStateRef.current);
 
+      lastTimeRef.current = performance.now(); // Set the initial value of lastTimeRef
       requestAnimationFrame(predictState);
     },
     [predictState, drawGameState]

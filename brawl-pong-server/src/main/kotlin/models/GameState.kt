@@ -1,14 +1,17 @@
 package models
 
+import java.util.*
+
 data class GameState(
     val player1: Player,
     val player2: Player,
     val ball: Ball,
     val field: Field,
+    var paused: Boolean = true,
+    var winner: UUID? = null,
 ) {
     companion object {
         fun createInitialState(): GameState {
-
             val fieldWidth = 800f
             val fieldHeight = 600f
 
@@ -27,14 +30,14 @@ data class GameState(
             val player1 = Player(
                 x = player1X,
                 y = playerY,
-                speed = 0f,
+                speed = 5f,
             )
 
             // Create the player2 object with its x and y positions
             val player2 = Player(
                 x = player2X,
                 y = playerY,
-                speed = 0f
+                speed = 5f
             )
 
             // Set the ball's initial x and y position to be in the middle of the field
@@ -45,7 +48,7 @@ data class GameState(
             val ball = Ball(
                 x = ballX,
                 y = ballY,
-                speed = 0f,
+                speed = 3f,
             )
 
             // Create the field object with its width and height
@@ -59,13 +62,6 @@ data class GameState(
         }
     }
 
-    fun startMovement() {
-        val initialPlayerSpeed = 5f
-
-        ball.setSpeed(3f)
-        player1.renderData.speed = initialPlayerSpeed
-        player2.renderData.speed = initialPlayerSpeed
-    }
 
     fun resetBall() {
         ball.x = field.width / 2f

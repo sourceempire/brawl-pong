@@ -5,16 +5,22 @@ import { useControls } from "./hooks/useControls";
 import {
   CountDownMessageData,
   GameStateMessageData,
+  PlayerInfoMessageData,
   SocketMessage,
 } from "./types/SocketMessage";
 import { useConnection } from "./hooks/useConnection";
+import { PlayerInfo } from "./types/Player";
 
 function App() {
-  const [playerNumber, setPlayerNumber] = useState<number | null>(null);
   const [secondsToStart, setSecondsToStart] = useState<number | null>(null);
 
   const [player1Score, setPlayer1Score] = useState<number>(0);
   const [player2Score, setPlayer2Score] = useState<number>(0);
+
+  const [player1Info, setPlayer1Info] = useState<PlayerInfo | null>(null);
+  const [player2Info, setPlayer2Info] = useState<PlayerInfo | null>(null);
+
+  const [winner, setWinner] = useState<string | null>(null);
 
   const { canvasRef, drawGameState } = useDrawGameState();
   const { stopPrediction, startPrediction } = usePrediction(drawGameState);
@@ -22,14 +28,29 @@ function App() {
   const handleGameStateChange = useCallback(
     (message: GameStateMessageData) => {
       stopPrediction();
+
+      if (message.gameState.winner) {
+        setWinner(message.gameState.winner)
+      }
+
+      if (message.gameState.paused) {
+        drawGameState(message.gameState);
+        return
+      }
+
       startPrediction(message.gameState, message.tickRate);
 
-      setPlayerNumber(message.clientPlayerNumber);
       setPlayer1Score(message.gameState.player1.score);
       setPlayer2Score(message.gameState.player2.score);
+      
     },
-    [startPrediction, stopPrediction]
+    [drawGameState, startPrediction, stopPrediction]
   );
+
+  const handlePlayerInfo = useCallback((message: PlayerInfoMessageData) => {
+    setPlayer1Info(message.player1)
+    setPlayer2Info(message.player2)
+  }, [])
 
   const handleCountDown = useCallback((message: CountDownMessageData) => {
     setSecondsToStart(message.countdown);
@@ -45,23 +66,30 @@ function App() {
         case "match-countdown":
           handleCountDown(message.data);
           break;
+        case "player-info":
+          handlePlayerInfo(message.data);
+          break;
       }
     },
-    [handleCountDown, handleGameStateChange]
+    [handleCountDown, handleGameStateChange, handlePlayerInfo]
   );
 
   const { socket } = useConnection({ onMessage });
 
   useControls(socket);
 
+  console.log(winner)
+  console.log(player1Info)
+  console.log(player2Info)
+
   return (
     <div className="App">
       <div className="game-field-wrapper">
-        {playerNumber === 1 && (
+        {player1Info?.isSessionPlayer && (
           <div className="player-info left">This is you</div>
         )}
         <canvas className="game-field" ref={canvasRef}></canvas>
-        {playerNumber === 2 && (
+        {player2Info?.isSessionPlayer && (
           <div className="player-info right">This is you</div>
         )}
       </div>
@@ -71,6 +99,9 @@ function App() {
       <button onClick={() => socket?.send(JSON.stringify({ type: "ready" }))}>
         Im ready
       </button>
+
+      { winner === player1Info?.id && <div>Player 1 won</div>}
+      { winner === player2Info?.id && <div>Player 2 won</div>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ export enum PlayerDirection {
 }
 
 export type Player = {
+    id: string,
     ready: boolean,
     score: number,
     connected: boolean,
@@ -16,5 +17,10 @@ export type Player = {
         width: number,
         speed: number,
     }
+}
+
+export type PlayerInfo = {
+    id: string
+    isSessionPlayer: boolean,
 }
 

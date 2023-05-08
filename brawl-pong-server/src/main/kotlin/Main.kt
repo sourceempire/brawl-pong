@@ -26,7 +26,7 @@ fun main() {
     ClientConnectionHandler.create(sockJSHandler, matchHandler, auth)
     val serverConnectionHandler = ServerConnectionHandler.create(vertx, matchHandler, gameServerHost, gameServerPort)
 
-    matchHandler.registerScoreUpdateListener(serverConnectionHandler)
+    matchHandler.registerMatchEventListener(serverConnectionHandler)
 
     server.requestHandler(router).listen()
 }

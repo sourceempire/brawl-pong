@@ -1,5 +1,6 @@
 package models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import exceptions.PlayerNotInMatchException
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
@@ -8,18 +9,18 @@ import java.util.UUID
 data class Match(
     val id: UUID,
     val gameState: GameState,
+    @JsonIgnore
     val requiresAuthorization: Boolean = false,
-    val scoreToWin: Int = 21,
-    val winner: UUID? = null,
+    val scoreToWin: Int = 2,
+
 ) {
     val tickRate = 60
 
     fun dispatchGameState() {
-        fun createMessageForPlayer(clientPlayerNumber: Int): Buffer {
+        fun createGameStateMessage(): Buffer {
             val data = mapOf(
                 "tickRate" to tickRate,
                 "gameState" to gameState,
-                "clientPlayerNumber" to clientPlayerNumber
             )
             val message = mapOf(
                 "type" to "game-state",
@@ -28,11 +29,36 @@ data class Match(
             return Buffer.buffer(Json.encode(message))
         }
 
-        // Send the game state to player 1 with clientPlayerNumber set to 1
-        gameState.player1.connection?.write(createMessageForPlayer(1))
+        gameState.player1.connection?.write(createGameStateMessage())
+        gameState.player2.connection?.write(createGameStateMessage())
+    }
 
-        // Send the game state to player 2 with clientPlayerNumber set to 2
-        gameState.player2.connection?.write(createMessageForPlayer(2))
+    fun dispatchPlayerInfo() {
+        fun createPlayerInfoMessage(sessionPlayerId: UUID): Buffer {
+            val data = mapOf(
+                "player1" to mapOf(
+                    "id" to gameState.player1.id,
+                    "isSessionPlayer" to (gameState.player1.id == sessionPlayerId)
+                ),
+                "player2" to mapOf(
+                    "id" to gameState.player2.id,
+                    "isSessionPlayer" to (gameState.player2.id == sessionPlayerId)
+                ),
+            )
+
+            val message = mapOf(
+                "type" to "player-info",
+                "data" to data
+            )
+
+            return Buffer.buffer(Json.encode(message))
+        }
+
+        // Send the game state to player 1 with the player id connected to the session
+        gameState.player1.connection?.write(createPlayerInfoMessage(gameState.player1.id))
+
+        // Send the game state to player 2 with the player id connected to the session
+        gameState.player2.connection?.write(createPlayerInfoMessage(gameState.player2.id))
     }
 
     fun dispatchMatchCountdown(countdown: Long) {
@@ -52,5 +78,23 @@ data class Match(
     fun getPlayerById(playerId: UUID): Player {
         return listOf(gameState.player1, gameState.player2).find { it.id == playerId }
             ?: throw PlayerNotInMatchException()
+    }
+
+    fun checkForWinner(onWinnerExists: () -> Unit) {
+        val player1 = gameState.player1
+        val player2 = gameState.player2
+
+        when {
+            player1.score == scoreToWin -> {
+                gameState.winner = player1.id
+                gameState.paused = true
+                onWinnerExists()
+            }
+            player2.score == scoreToWin -> {
+                gameState.winner = player2.id
+                gameState.paused = true
+                onWinnerExists()
+            }
+        }
     }
 }

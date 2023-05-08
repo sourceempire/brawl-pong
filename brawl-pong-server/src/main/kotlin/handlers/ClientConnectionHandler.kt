@@ -7,6 +7,7 @@ import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import auth.Auth
 import exceptions.MatchNotFoundException
 import io.netty.handler.codec.http.QueryStringDecoder
+import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import models.*
 
@@ -47,43 +48,53 @@ private class ClientConnectionHandlerImpl(
             handleAuthorizedConnection(sockJSSocket, token)
         } else {
             handleUnauthorizedConnection(sockJSSocket)
+        }.onSuccess {
+            matchHandler.getMatchBySocket(sockJSSocket).dispatchPlayerInfo()
         }
     }
 
-    private fun handleAuthorizedConnection(sockJSSocket: SockJSSocket, token: String) {
-        auth.validateBrawlToken(token)
-            .onSuccess { authInfo ->
-                val match = matchHandler.getAuthorizedMatch(authInfo.matchId)
-                match.getPlayerById(authInfo.playerId).connection = sockJSSocket
-                match.dispatchGameState()
+    private fun handleAuthorizedConnection(sockJSSocket: SockJSSocket, token: String): Future<Unit> {
+        return auth.validateBrawlToken(token)
+            .compose { authInfo ->
+                try {
+                    val match = matchHandler.getAuthorizedMatch(authInfo.matchId)
+                    match.getPlayerById(authInfo.playerId).connection = sockJSSocket
+                    match.dispatchGameState()
+                    Future.succeededFuture<Unit>()
+                } catch (error: Throwable) {
+                    Future.failedFuture(error)
+                }
             }.onFailure {
                 it.printStackTrace()
             }
     }
 
-    private fun handleUnauthorizedConnection(sockJSSocket: SockJSSocket) {
+    private fun handleUnauthorizedConnection(sockJSSocket: SockJSSocket): Future<Unit> {
         // Check if there's an available GameSession with an empty player2 slot
-        try {
+        return try {
             val availableMatch = matchHandler.getMatchByPlayer2Socket(sockJSSocket)
 
             // If an available GameSession is found, set the connecting client as player2
             availableMatch.gameState.player2.connection = sockJSSocket
             availableMatch.dispatchGameState()
+
+            Future.succeededFuture()
         } catch (error: Throwable) {
             if (error is MatchNotFoundException) {
                 // If there's no available GameSession, create a new one and set the connecting client as player1
                 val match = matchHandler.createMatch()
                 match.gameState.player1.connection = sockJSSocket
                 match.dispatchGameState()
-            } else {
-                throw error
-            }
 
+                Future.succeededFuture()
+            } else {
+                Future.failedFuture(error)
+            }
         }
     }
 
     private fun handleMessage(sockJSSocket: SockJSSocket, buffer: Buffer) {
-        val match = matchHandler.getMatchBySocket(sockJSSocket) ?: return
+        val match = matchHandler.getMatchBySocket(sockJSSocket)
 
         val jsonMessage = JsonObject(buffer.toString())
 

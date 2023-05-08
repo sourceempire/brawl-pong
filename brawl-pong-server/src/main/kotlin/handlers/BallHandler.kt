@@ -21,10 +21,7 @@ fun updateBallPosition(match: Match, onScore: (match: Match, player: UUID) -> Un
         player.score += 1
         gameState.resetBall()
         match.dispatchGameState()
-
-        player.id?.let { playerId ->
-            onScore(match, playerId)
-        }
+        onScore(match, player.id)
     }
 
     // Check if the ball goes out of bounds on the left or right side
