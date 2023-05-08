@@ -1,5 +1,6 @@
 package handlers
 
+import exceptions.MatchEndWithoutWinnerException
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
@@ -89,7 +90,13 @@ class ServerConnectionHandlerImpl(
     }
 
     override fun onMatchCreated(match: Match) {
-        TODO("Not yet implemented")
+        this.socket.write(Json.encode(mapOf(
+            "type" to "match-created",
+            "serverAddress" to "$gameServerHost:$gameServerPort/match/",
+            "matchId" to match.id,
+            "player1Id" to match.gameState.player1.id,
+            "player2Id" to match.gameState.player2.id
+        )))
     }
 
     override fun onPlayerConnected(match: Match, player: Player) {
@@ -121,6 +128,18 @@ class ServerConnectionHandlerImpl(
     }
 
     override fun onMatchEnded(match: Match) {
-        TODO("Not yet implemented")
+        val winner = match.gameState.winner ?: throw MatchEndWithoutWinnerException()
+
+        this.socket.write(
+            Json.encode(mapOf(
+                "type" to "match-ended",
+                "matchId" to match.id,
+                "winner" to winner,
+                "score" to mapOf(
+                    match.gameState.player1.id to match.gameState.player1.score,
+                    match.gameState.player2.id to match.gameState.player2.score
+                )
+            ))
+        )
     }
 }

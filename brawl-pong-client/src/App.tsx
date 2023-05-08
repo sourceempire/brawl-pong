@@ -78,10 +78,6 @@ function App() {
 
   useControls(socket);
 
-  console.log(winner)
-  console.log(player1Info)
-  console.log(player2Info)
-
   return (
     <div className="App">
       <div className="game-field-wrapper">
