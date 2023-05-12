@@ -113,7 +113,7 @@ private class ClientConnectionHandlerImpl(
 
     private fun handleClientDisconnect(sockJSSocket: SockJSSocket) {
         // Find and remove the game session this player was in if a match exists
-        val match = matchHandler.getMatchBySocket(sockJSSocket)?: return
+        val match = matchHandler.getMatchBySocket(sockJSSocket)
 
         matchHandler.removeMatch(match.id)
 

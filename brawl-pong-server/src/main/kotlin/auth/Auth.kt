@@ -1,8 +1,9 @@
 package auth
 
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.json.JsonObject
+import io.vertx.ext.auth.authentication.TokenCredentials
 import io.vertx.ext.auth.jwt.JWTAuth
 import io.vertx.kotlin.core.json.get
 import io.vertx.kotlin.core.json.json
@@ -41,25 +42,25 @@ class Auth(vertx: Vertx) {
      * @param jwt The JWT string to be validated.
      * @return A future containing the JWT's claims as a JsonObject if the validation is successful and the "use" claim is "pong"; otherwise, an error message.
      */
-    fun validateBrawlToken(jwt: String) = futurize<JwtMatchAuthInfo>{
-        jwtAuth.authenticate(json { obj("jwt" to jwt, "token" to jwt) }) { result ->
-            if (result.succeeded()) {
-                val claims = result.result().principal()
+    fun validateBrawlToken(jwt: String): Future<JwtMatchAuthInfo> {
+        return jwtAuth.authenticate(TokenCredentials(jwt))
+            .compose { claims ->
                 if (claims.containsKey("use") &&
                     claims.get<String>("use") == "pong" &&
                     claims.containsKey("playerId") &&
                     claims.containsKey("matchId")) {
 
-                    val playerId = UUID.fromString(claims.get<String>("playerId"))
-                    val matchId = UUID.fromString(claims.get<String>("matchId"))
+                    val playerId = UUID.fromString(claims.get("playerId"))
+                    val matchId = UUID.fromString(claims.get("matchId"))
 
-                    promise.complete(JwtMatchAuthInfo(playerId, matchId))
-                } else {
-                    promise.fail("Not correct type of use")
+                    Future.succeededFuture(JwtMatchAuthInfo(playerId, matchId))
                 }
-            } else {
-                promise.fail("Not valid jwt")
+                else {
+                    Future.failedFuture("Not correct type of use")
+                }
+            }.recover {
+                it.printStackTrace()
+                Future.failedFuture("Not valid jwt")
             }
-        }
     }
 }

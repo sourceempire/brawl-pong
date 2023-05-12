@@ -12,22 +12,24 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.vertx:vertx-core:4.2.3'
-    implementation "io.vertx:vertx-lang-kotlin:4.2.3"
+    implementation 'io.vertx:vertx-core:4.4.1'
+    implementation "io.vertx:vertx-lang-kotlin:4.4.1"
 
-    implementation 'io.vertx:vertx-web:4.2.3'
-    implementation 'io.vertx:vertx-web-client:4.2.3'
-    implementation 'io.vertx:vertx-web-common:4.2.3'
+    implementation 'io.vertx:vertx-web:4.4.1'
+    implementation 'io.vertx:vertx-web-client:4.4.1'
+    implementation 'io.vertx:vertx-web-common:4.4.1'
 
-    implementation 'io.vertx:vertx-sockjs-service-proxy:4.2.3'
+    implementation 'io.vertx:vertx-sockjs-service-proxy:4.4.1'
 
-    implementation 'io.vertx:vertx-auth-jwt:4.2.3'
+    implementation 'io.vertx:vertx-auth-jwt:4.4.1'
+
+    implementation 'io.vertx:vertx-zookeeper:4.4.1'
 
     implementation "com.fasterxml.jackson.core:jackson-databind:2.13.1"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1"
 
     // Testing
-    testImplementation "io.vertx:vertx-junit5:4.2.3"
+    testImplementation "io.vertx:vertx-junit5:4.4.1"
 
     // testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
