@@ -11,14 +11,9 @@ import io.vertx.core.*
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.StaticHandler
-import io.vertx.ext.web.handler.sockjs.SockJSHandler
-import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions
 import io.vertx.kotlin.core.deploymentOptionsOf
 import io.vertx.spi.cluster.zookeeper.ZookeeperClusterManager
 
-
-private const val gameServerPort = 8181
-private const val gameServerHost = "localhost"
 
 fun main() {
     loadEnv()
@@ -41,12 +36,12 @@ class Main: AbstractVerticle() {
             println("Is clustered")
         }
 
-        val server = vertx.createHttpServer(HttpServerOptions().setHost(gameServerHost).setPort(gameServerPort))
+        val server = vertx.createHttpServer(HttpServerOptions().setHost(getEnvProperty("THIS_SERVER_URL")).setPort(getEnvProperty("HTTP_PORT").toInt()))
         val router = Router.router(vertx)
         val auth = Auth(vertx)
         val matchHandler = MatchHandler.create(vertx)
 
-        val serverConnectionHandler = ServerConnectionHandler.create(vertx, matchHandler, gameServerHost, gameServerPort)
+        val serverConnectionHandler = ServerConnectionHandler.create(vertx, matchHandler)
         matchHandler.registerMatchEventListener(serverConnectionHandler)
 
         ClientConnectionHandler(vertx, router, matchHandler, auth)
