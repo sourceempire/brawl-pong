@@ -1,34 +1,32 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.handler.sockjs.SockJSHandler
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 
-import auth.Auth
-import exceptions.MatchNotFoundException
+import io.sourceempire.brawlpong.auth.Auth
+import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
 import io.netty.handler.codec.http.QueryStringDecoder
+import io.sourceempire.brawlpong.models.*
 import io.vertx.core.Future
+import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import models.*
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions
 
-interface ClientConnectionHandler {
-    companion object {
-        fun create(
-            sockJSHandler: SockJSHandler,
-            matchHandler: MatchHandler,
-            auth: Auth
-        ): ClientConnectionHandler = ClientConnectionHandlerImpl(sockJSHandler, matchHandler, auth)
-    }
-}
-
-private class ClientConnectionHandlerImpl(
-    sockJSHandler: SockJSHandler,
+class ClientConnectionHandler(
+    vertx: Vertx,
+    router: Router,
     private val matchHandler: MatchHandler,
     private val auth: Auth
-): ClientConnectionHandler {
-
+) {
     init {
-        sockJSHandler.socketHandler { sockJSSocket ->
+        val sockJSOptions = SockJSHandlerOptions().setHeartbeatInterval(2000)
+        val sockJSHandler = SockJSHandler.create(vertx, sockJSOptions)
+
+        router.route("/game/*").subRouter(sockJSHandler.socketHandler { sockJSSocket ->
+            sockJSSocket.handler(sockJSSocket::write)
+
             handleClientConnection(sockJSSocket)
 
             sockJSSocket.handler { buffer ->
@@ -38,7 +36,7 @@ private class ClientConnectionHandlerImpl(
             sockJSSocket.endHandler {
                 handleClientDisconnect(sockJSSocket)
             }
-        }
+        })
     }
 
     private fun handleClientConnection(sockJSSocket: SockJSSocket) {

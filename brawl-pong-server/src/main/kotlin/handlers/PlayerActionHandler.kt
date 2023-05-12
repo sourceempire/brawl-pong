@@ -1,7 +1,7 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
-import models.*
+import io.sourceempire.brawlpong.models.*
 import java.util.*
 
 fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket, matchHandler: MatchHandler) {

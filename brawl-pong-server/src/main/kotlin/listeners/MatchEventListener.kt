@@ -1,7 +1,7 @@
-package listeners
+package io.sourceempire.brawlpong.listeners
 
-import models.Match
-import models.Player
+import io.sourceempire.brawlpong.models.Match
+import io.sourceempire.brawlpong.models.Player
 import java.util.*
 
 interface MatchEventListener {

@@ -1,7 +1,7 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import models.PlayerDirection
-import models.Match
+import io.sourceempire.brawlpong.models.PlayerDirection
+import io.sourceempire.brawlpong.models.Match
 
 
 fun updatePaddlePositions(match: Match) {

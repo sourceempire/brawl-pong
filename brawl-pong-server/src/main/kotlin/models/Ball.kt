@@ -1,4 +1,4 @@
-package models
+package io.sourceempire.brawlpong.models
 
 import kotlin.math.cos
 import kotlin.math.sin

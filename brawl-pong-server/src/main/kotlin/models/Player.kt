@@ -1,4 +1,4 @@
-package models
+package io.sourceempire.brawlpong.models
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore

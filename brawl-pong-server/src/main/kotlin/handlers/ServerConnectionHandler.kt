@@ -1,16 +1,16 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import exceptions.MatchEndWithoutWinnerException
+import io.sourceempire.brawlpong.exceptions.MatchEndWithoutWinnerException
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.core.net.NetSocket
-import listeners.MatchEventListener
-import models.CreateMatchEvent
-import models.Match
-import models.Player
-import models.ServerEvent
+import io.sourceempire.brawlpong.listeners.MatchEventListener
+import io.sourceempire.brawlpong.models.CreateMatchEvent
+import io.sourceempire.brawlpong.models.Match
+import io.sourceempire.brawlpong.models.Player
+import io.sourceempire.brawlpong.models.ServerEvent
 import java.util.*
 
 interface ServerConnectionHandler: MatchEventListener {

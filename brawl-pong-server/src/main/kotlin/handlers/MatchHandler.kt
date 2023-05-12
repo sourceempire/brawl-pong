@@ -1,14 +1,14 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import exceptions.MatchAlreadyFinishedException
-import exceptions.MatchNotFoundException
+import io.sourceempire.brawlpong.exceptions.MatchAlreadyFinishedException
+import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
-import listeners.MatchEventListener
-import models.CreateMatchEvent
-import models.GameState
-import models.Match
+import io.sourceempire.brawlpong.listeners.MatchEventListener
+import io.sourceempire.brawlpong.models.CreateMatchEvent
+import io.sourceempire.brawlpong.models.GameState
+import io.sourceempire.brawlpong.models.Match
 import java.util.*
 
 interface MatchHandler {

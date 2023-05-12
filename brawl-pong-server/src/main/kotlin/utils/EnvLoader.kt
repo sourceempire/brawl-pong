@@ -1,4 +1,4 @@
-package utils
+package io.sourceempire.brawlpong.utils
 
 import java.io.BufferedReader
 import java.io.File

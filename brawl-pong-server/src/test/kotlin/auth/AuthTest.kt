@@ -1,5 +1,6 @@
 package auth
 
+import io.sourceempire.brawlpong.auth.Auth
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(VertxExtension::class)
 class AuthTest {
 
-    lateinit var auth: Auth
+    private lateinit var auth: Auth
 
     @BeforeAll
     fun beforeAll() {

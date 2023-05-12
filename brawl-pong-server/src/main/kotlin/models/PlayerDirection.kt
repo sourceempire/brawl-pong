@@ -1,4 +1,4 @@
-package models
+package io.sourceempire.brawlpong.models
 
 enum class PlayerDirection {
     Stop,

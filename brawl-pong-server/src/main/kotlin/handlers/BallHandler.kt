@@ -1,7 +1,7 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import models.Match
-import models.Player
+import io.sourceempire.brawlpong.models.Match
+import io.sourceempire.brawlpong.models.Player
 import java.util.UUID
 
 // To adjust the max angle when hitting the paddle's top or bottom

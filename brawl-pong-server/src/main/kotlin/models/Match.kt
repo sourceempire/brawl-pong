@@ -1,7 +1,7 @@
-package models
+package io.sourceempire.brawlpong.models
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import exceptions.PlayerNotInMatchException
+import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import java.util.UUID
