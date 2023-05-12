@@ -149,7 +149,7 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
 
 
     private fun updateGameState(match: Match) {
-        updatePlayerPositions(match)
+        updatePaddlePositions(match)
         updateBallPosition(match, ::onScore)
         handlePaddleCollisions(match)
         handleWallCollisions(match)

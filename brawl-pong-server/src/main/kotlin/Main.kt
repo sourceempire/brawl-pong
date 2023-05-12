@@ -5,11 +5,14 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandler
 
 import auth.Auth
 import handlers.*
+import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.DeploymentOptions
+import io.vertx.core.Promise
 import io.vertx.core.VertxOptions
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.kotlin.core.deploymentOptionsOf
+import io.vertx.spi.cluster.zookeeper.ZookeeperClusterManager
 
 private const val gameServerPort = 8181
 private const val gameServerHost = "localhost"
@@ -34,25 +37,42 @@ fun main() {
 
     server.requestHandler(router).listen()
 }
-//
-//fun startSingleVertx() {
-//    val vertxOptions = VertxOptions().setBlockedThreadCheckInterval(999888777666L)
-//
-//    val vertx = Vertx.vertx(vertxOptions)
-//    vertx.deployVerticle("io.sourceempire.otherproduct.Main", deploymentOptionsOf(instances = 1))
-//}
-//
-//fun startClusteredVertx() {
-//    val vertxOptions = VertxOptions().setBlockedThreadCheckInterval(999888777666L)
-//
-//    val manager = ZookeeperClusterManager()
-//    vertxOptions.clusterManager = manager
-//    Vertx.clusteredVertx(vertxOptions) { res: AsyncResult<Vertx> ->
-//        if (res.succeeded()) {
-//            val vertx = res.result()
-//            vertx.deployVerticle("io.sourceempire.otherproduct.Main", DeploymentOptions().setInstances(1))
-//        } else {
-//            println("Could not start vertx: ${res.cause().message}")
-//        }
-//    }
-//}
+
+class Main: AbstractVerticle() {
+
+    override fun start(startPromise: Promise<Void>) {
+        // Here you can start HTTP server, set up routes, etc.
+
+        // Remember to complete the start promise when you're done setting up
+        startPromise.complete()
+    }
+
+    override fun stop(stopPromise: Promise<Void>) {
+        // Here you can clean up resources, if necessary
+
+        // Remember to complete the stop promise when you're done cleaning up
+        stopPromise.complete()
+    }
+}
+
+fun startSingleVertx() {
+    val vertxOptions = VertxOptions().setBlockedThreadCheckInterval(999888777666L)
+
+    val vertx = Vertx.vertx(vertxOptions)
+    vertx.deployVerticle("io.sourceempire.brawlpong.Main")
+}
+
+fun startClusteredVertx() {
+    val vertxOptions = VertxOptions().setBlockedThreadCheckInterval(999888777666L)
+
+    val manager = ZookeeperClusterManager()
+    vertxOptions.clusterManager = manager
+    Vertx.clusteredVertx(vertxOptions) { res: AsyncResult<Vertx> ->
+        if (res.succeeded()) {
+            val vertx = res.result()
+            vertx.deployVerticle("io.sourceempire.brawlgaming.Main", deploymentOptionsOf(instances = 1))
+        } else {
+            println("Could not start vertx: ${res.cause().message}")
+        }
+    }
+}
