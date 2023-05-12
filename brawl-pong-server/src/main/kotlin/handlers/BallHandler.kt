@@ -1,13 +1,13 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import models.Match
-import models.Player
+import io.sourceempire.brawlpong.models.Match
+import io.sourceempire.brawlpong.models.Player
 import java.util.UUID
 
 // To adjust the max angle when hitting the paddle's top or bottom
 const val PADDLE_COLLISION_OFFSET = 55.0
 
-fun updateBallPosition(match: Match, onScore: (match: Match, player: UUID) -> Unit) {
+fun updateBallPosition(match: Match, onScore: (match: Match) -> Unit) {
     val gameState = match.gameState
 
     // Update the ball's position
@@ -21,7 +21,7 @@ fun updateBallPosition(match: Match, onScore: (match: Match, player: UUID) -> Un
         player.score += 1
         gameState.resetBall()
         match.dispatchGameState()
-        onScore(match, player.id)
+        onScore(match)
     }
 
     // Check if the ball goes out of bounds on the left or right side

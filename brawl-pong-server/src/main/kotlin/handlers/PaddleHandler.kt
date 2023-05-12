@@ -1,10 +1,10 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import models.PlayerDirection
-import models.Match
+import io.sourceempire.brawlpong.models.PlayerDirection
+import io.sourceempire.brawlpong.models.Match
 
 
-fun updatePlayerPositions(match: Match) {
+fun updatePaddlePositions(match: Match) {
     val gameState = match.gameState
     // Update player 1's position
     when (gameState.player1.renderData.direction) {

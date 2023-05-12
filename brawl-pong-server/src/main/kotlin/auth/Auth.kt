@@ -1,17 +1,13 @@
-package auth
+package io.sourceempire.brawlpong.auth
 
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.auth.authentication.TokenCredentials
 import io.vertx.ext.auth.jwt.JWTAuth
-import io.vertx.kotlin.core.json.get
-import io.vertx.kotlin.core.json.json
-import io.vertx.kotlin.core.json.obj
 import io.vertx.kotlin.ext.auth.jwt.jwtAuthOptionsOf
 import io.vertx.kotlin.ext.auth.pubSecKeyOptionsOf
-import models.JwtMatchAuthInfo
-import utils.futurize
+import io.sourceempire.brawlpong.models.JwtMatchAuthInfo
 import java.util.*
 
 private const val brawlJwtKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzyLwQf73XW5wiojO0IlE+w+xguHQzD7lSdPAaNQG+g8BOvBd7jkuLlGY+WeyJBE2lGDCiQzdypDOMG16u5xCW1U5oiHaCjYIAnQfPVl/gF7mYtcpFcHMsvrCbDznSP9OQgbJa8qE8hxYkvrF+f7+A9BPlfEN56bpqGjporrkpxx/BWz9ftaTaqEQkqoSr2tbCdbVsS5ojRBp2z+ho5Q53O9S/+ixFR1Kjz8daYQ1thQJK+475GJ+nR/h4GmxXrWPd5F27REyPRNX5fodLg7VNR+BuGtsuOGkoK8RpSG9cfDmkh7efIBpVwRw3n67zigGs8IVkGCFgxGaH5X/Ip5UkQIDAQAB\n-----END PUBLIC KEY-----"

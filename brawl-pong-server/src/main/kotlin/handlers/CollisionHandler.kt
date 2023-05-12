@@ -1,6 +1,6 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import models.Match
+import io.sourceempire.brawlpong.models.Match
 import kotlin.math.cos
 import kotlin.math.sin
 

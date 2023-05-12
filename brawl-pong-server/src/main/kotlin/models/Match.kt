@@ -1,7 +1,7 @@
-package models
+package io.sourceempire.brawlpong.models
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import exceptions.PlayerNotInMatchException
+import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import java.util.UUID
@@ -80,7 +80,7 @@ data class Match(
             ?: throw PlayerNotInMatchException()
     }
 
-    fun checkForWinner(onWinnerExists: () -> Unit) {
+    fun updateWinnerIfExists(): Boolean {
         val player1 = gameState.player1
         val player2 = gameState.player2
 
@@ -88,13 +88,15 @@ data class Match(
             player1.score == scoreToWin -> {
                 gameState.winner = player1.id
                 gameState.paused = true
-                onWinnerExists()
+                return true
             }
             player2.score == scoreToWin -> {
                 gameState.winner = player2.id
                 gameState.paused = true
-                onWinnerExists()
+                return true
             }
         }
+
+        return false
     }
 }

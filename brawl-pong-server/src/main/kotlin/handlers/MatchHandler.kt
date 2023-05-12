@@ -1,14 +1,14 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import exceptions.MatchAlreadyFinishedException
-import exceptions.MatchNotFoundException
+import io.sourceempire.brawlpong.exceptions.MatchAlreadyFinishedException
+import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
-import listeners.MatchEventListener
-import models.CreateMatchEvent
-import models.GameState
-import models.Match
+import io.sourceempire.brawlpong.listeners.MatchEventListener
+import io.sourceempire.brawlpong.models.CreateMatchRequest
+import io.sourceempire.brawlpong.models.GameState
+import io.sourceempire.brawlpong.models.Match
 import java.util.*
 
 interface MatchHandler {
@@ -17,7 +17,7 @@ interface MatchHandler {
     }
 
     fun createMatch(): Match
-    fun createMatch(createMatchEvent: CreateMatchEvent): Future<Unit>
+    fun createMatch(createMatchRequest: CreateMatchRequest): Future<Unit>
     fun getMatchById(matchId: UUID): Match
     fun getUnauthorizedMatch(matchId: UUID): Match
     fun getAuthorizedMatch(matchId: UUID): Match
@@ -43,11 +43,11 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         return matches[matchId]!!
     }
 
-    override fun createMatch(createMatchEvent: CreateMatchEvent): Future<Unit> {
+    override fun createMatch(createMatchRequest: CreateMatchRequest): Future<Unit> {
         val gameState = GameState.createInitialState()
-        gameState.player1.id = createMatchEvent.player1Id
-        gameState.player2.id = createMatchEvent.player2Id
-        val match = Match(createMatchEvent.matchId, gameState, true)
+        gameState.player1.id = createMatchRequest.player1Id
+        gameState.player2.id = createMatchRequest.player2Id
+        val match = Match(createMatchRequest.matchId, gameState, true)
 
         matches[match.id] = match
         return Future.succeededFuture()
@@ -135,21 +135,17 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         match.dispatchGameState()
     }
 
-    private fun onScore(match: Match, player: UUID) {
-        invokeEventListenersIfAuthorized(match) {
-            it.onPlayerScored(match, player)
-        }
+    private fun onScore(match: Match) {
+        match.updateWinnerIfExists()
 
-        match.checkForWinner {
-            invokeEventListenersIfAuthorized(match) {
-                it.onMatchEnded(match)
-            }
+        invokeEventListenersIfAuthorized(match) {
+            it.onStateChanged(match.id)
         }
     }
 
 
     private fun updateGameState(match: Match) {
-        updatePlayerPositions(match)
+        updatePaddlePositions(match)
         updateBallPosition(match, ::onScore)
         handlePaddleCollisions(match)
         handleWallCollisions(match)

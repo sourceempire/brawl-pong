@@ -1,16 +1,11 @@
-package handlers
+package io.sourceempire.brawlpong.handlers
 
-import exceptions.MatchEndWithoutWinnerException
 import io.vertx.core.Vertx
-import io.vertx.core.buffer.Buffer
-import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
-import io.vertx.core.net.NetSocket
-import listeners.MatchEventListener
-import models.CreateMatchEvent
-import models.Match
-import models.Player
-import models.ServerEvent
+import io.sourceempire.brawlpong.listeners.MatchEventListener
+import io.sourceempire.brawlpong.models.CreateMatchRequest
+import io.sourceempire.brawlpong.utils.getEnvProperty
+import io.vertx.kotlin.core.json.jsonObjectOf
 import java.util.*
 
 interface ServerConnectionHandler: MatchEventListener {
@@ -18,128 +13,29 @@ interface ServerConnectionHandler: MatchEventListener {
         fun create(
             vertx: Vertx,
             matchHandler: MatchHandler,
-            gameServerHost: String,
-            gameServerPort: Int,
-        ): ServerConnectionHandler = ServerConnectionHandlerImpl(vertx, matchHandler, gameServerHost, gameServerPort)
+        ): ServerConnectionHandler = ServerConnectionHandlerImpl(vertx, matchHandler)
     }
 }
 
 class ServerConnectionHandlerImpl(
     vertx: Vertx,
     private val matchHandler: MatchHandler,
-    private val gameServerHost: String,
-    private val gameServerPort: Int,
 ): ServerConnectionHandler {
-
-    private lateinit var socket: NetSocket
-    private val pongServerPort = 8182
+    private val eventBus = vertx.eventBus()
 
     init {
-        val netServer = vertx.createNetServer()
+        eventBus.consumer<JsonObject>("brawl-pong.create-match").handler { message ->
+            val request = CreateMatchRequest(message.body())
 
-        netServer.connectHandler(::onConnect)
-
-        netServer.listen(pongServerPort, "localhost")
-            .onSuccess {
-                println("Pong server listening on port $pongServerPort")
+            matchHandler.createMatch(request).onSuccess {
+                message.reply(jsonObjectOf("serverAddress" to "${getEnvProperty("THIS_SERVER_URL")}:${getEnvProperty("HTTP_PORT")}/match/"))
             }.onFailure {
-                println("Failed to start Pong server: ${it.message}")
+                message.fail(500, it.message)
             }
-    }
-
-    private fun onConnect(socket: NetSocket) {
-        handleConnection(socket)
-
-        socket.handler { buffer -> handleMessage(buffer) }
-        socket.closeHandler { handleDisconnect() }
-        socket.exceptionHandler { throwable -> handleException(throwable) }
-    }
-
-    private fun handleConnection(socket: NetSocket) {
-        this.socket = socket
-        println("Brawl server connected")
-    }
-
-    private fun handleMessage(buffer: Buffer) {
-        val jsonMessage = JsonObject(buffer.toString())
-
-        when (val event = ServerEvent.fromJson(jsonMessage)) {
-            is CreateMatchEvent -> handleCreateMatchEvent(event)
         }
     }
 
-    private fun handleDisconnect() {
-        println("Brawl Server disconnected")
-    }
-
-    private fun handleException (throwable: Throwable) {
-        println("Error in TCP server: ${throwable.message}")
-    }
-
-    private fun handleCreateMatchEvent(event: CreateMatchEvent) {
-        matchHandler.createMatch(event)
-            .onSuccess {
-                this.socket.write(Json.encode(mapOf(
-                    "type" to "match-created",
-                    "serverAddress" to "$gameServerHost:$gameServerPort/match/",
-                    "matchId" to event.matchId,
-                    "player1Id" to event.player1Id,
-                    "player2Id" to event.player2Id
-                )))
-            }
-    }
-
-    override fun onMatchCreated(match: Match) {
-        this.socket.write(Json.encode(mapOf(
-            "type" to "match-created",
-            "serverAddress" to "$gameServerHost:$gameServerPort/match/",
-            "matchId" to match.id,
-            "player1Id" to match.gameState.player1.id,
-            "player2Id" to match.gameState.player2.id
-        )))
-    }
-
-    override fun onPlayerConnected(match: Match, player: Player) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onPlayerDisconnected(match: Match, player: Player) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onPlayerReady(match: Match, player: Player) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onMatchStarted(match: Match) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onPlayerScored(match: Match, player: UUID) {
-        this.socket.write(Json.encode(mapOf(
-            "type" to "player-scored",
-            "matchId" to match.id,
-            "player" to player,
-            "score" to mapOf(
-                match.gameState.player1.id to match.gameState.player1.score,
-                match.gameState.player2.id to match.gameState.player2.score
-            )
-        )))
-    }
-
-    override fun onMatchEnded(match: Match) {
-        val winner = match.gameState.winner ?: throw MatchEndWithoutWinnerException()
-
-        this.socket.write(
-            Json.encode(mapOf(
-                "type" to "match-ended",
-                "matchId" to match.id,
-                "winner" to winner,
-                "score" to mapOf(
-                    match.gameState.player1.id to match.gameState.player1.score,
-                    match.gameState.player2.id to match.gameState.player2.score
-                )
-            ))
-        )
+    override fun onStateChanged(matchId: UUID) {
+        eventBus.send("brawl-server.pong-match-state-changed", jsonObjectOf("matchId" to matchId))
     }
 }
