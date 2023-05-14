@@ -1,4 +1,4 @@
-package io.sourceempire.brawlpong.models
+package io.sourceempire.brawlpong.models.entities
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -6,9 +6,14 @@ import com.fasterxml.jackson.annotation.JsonManagedReference
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import java.util.UUID
 
-data class Player(
-    var id: UUID = UUID.randomUUID(),
+data class Paddle(
+    var playerId: UUID = UUID.randomUUID(),
 ) {
+    enum class Direction {
+        Stop,
+        Up,
+        Down
+    }
 
     @JsonManagedReference
     lateinit var renderData: PlayerRenderData
@@ -42,18 +47,18 @@ data class Player(
 
     data class PlayerRenderData(
         @JsonBackReference
-        val player: Player,
+        val paddle: Paddle,
         var x: Float,
         var y: Float,
         var speed: Float,
         val height: Int = 100,
         val width: Int = 20
     ) {
-        val direction: PlayerDirection
+        val direction: Direction
             get() = when {
-                player.upKeyPressed && !player.downKeyPressed -> PlayerDirection.Up
-                !player.upKeyPressed && player.downKeyPressed -> PlayerDirection.Down
-                else -> PlayerDirection.Stop
+                paddle.upKeyPressed && !paddle.downKeyPressed -> Direction.Up
+                !paddle.upKeyPressed && paddle.downKeyPressed -> Direction.Down
+                else -> Direction.Stop
             }
     }
 }

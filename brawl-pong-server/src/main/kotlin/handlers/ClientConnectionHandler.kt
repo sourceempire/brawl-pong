@@ -7,7 +7,13 @@ import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import io.sourceempire.brawlpong.auth.Auth
 import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
 import io.netty.handler.codec.http.QueryStringDecoder
-import io.sourceempire.brawlpong.models.*
+import io.sourceempire.brawlpong.handlers.actions.handleKeyDownEvent
+import io.sourceempire.brawlpong.handlers.actions.handleKeyUpEvent
+import io.sourceempire.brawlpong.handlers.actions.handlePlayerReadyEvent
+import io.sourceempire.brawlpong.models.actions.ClientAction
+import io.sourceempire.brawlpong.models.actions.KeyDownAction
+import io.sourceempire.brawlpong.models.actions.KeyUpAction
+import io.sourceempire.brawlpong.models.actions.ReadyAction
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -73,7 +79,7 @@ class ClientConnectionHandler(
             val availableMatch = matchHandler.getMatchByPlayer2Socket(sockJSSocket)
 
             // If an available GameSession is found, set the connecting client as player2
-            availableMatch.gameState.player2.connection = sockJSSocket
+            availableMatch.gameState.paddle2.connection = sockJSSocket
             availableMatch.dispatchGameState()
 
             Future.succeededFuture()
@@ -81,7 +87,7 @@ class ClientConnectionHandler(
             if (error is MatchNotFoundException) {
                 // If there's no available GameSession, create a new one and set the connecting client as player1
                 val match = matchHandler.createMatch()
-                match.gameState.player1.connection = sockJSSocket
+                match.gameState.paddle1.connection = sockJSSocket
                 match.dispatchGameState()
 
                 Future.succeededFuture()
@@ -97,10 +103,10 @@ class ClientConnectionHandler(
         val jsonMessage = JsonObject(buffer.toString())
 
         try {
-            when (val event = ClientEvent.fromJson(jsonMessage)) {
-                is ReadyEvent -> handlePlayerReadyEvent(match, sockJSSocket, matchHandler)
-                is KeyDownEvent -> handleKeyDownEvent(match, sockJSSocket, event)
-                is KeyUpEvent -> handleKeyUpEvent(match, sockJSSocket, event)
+            when (val event = ClientAction.fromJson(jsonMessage)) {
+                is ReadyAction -> handlePlayerReadyEvent(match, sockJSSocket, matchHandler)
+                is KeyDownAction -> handleKeyDownEvent(match, sockJSSocket, event)
+                is KeyUpAction -> handleKeyUpEvent(match, sockJSSocket, event)
             }
         } catch (error: IllegalArgumentException) {
             error.printStackTrace()

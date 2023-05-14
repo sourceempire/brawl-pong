@@ -10,7 +10,7 @@ export function useDrawGameState() {
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
 
-    const { player1, player2, ball, field } = gameState;
+    const { paddle1, paddle2, ball, field } = gameState;
 
     canvasRef.current.width = field.width;
     canvasRef.current.height = field.height;
@@ -19,16 +19,16 @@ export function useDrawGameState() {
 
     // Draw player 1
     ctx.fillStyle = "white";
-    ctx.fillRect(player1.renderData.x, player1.renderData.y, player1.renderData.width, player1.renderData.height);
+    ctx.fillRect(paddle1.renderData.x, paddle1.renderData.y, paddle1.renderData.width, paddle1.renderData.height);
 
     // Draw player 2
     ctx.fillStyle = "white";
 
-    if (!player2.connected) {
+    if (!paddle2.connected) {
         ctx.globalAlpha = 0.4;
     }
 
-    ctx.fillRect(player2.renderData.x, player2.renderData.y, player2.renderData.width, player2.renderData.height);
+    ctx.fillRect(paddle2.renderData.x, paddle2.renderData.y, paddle2.renderData.width, paddle2.renderData.height);
     ctx.globalAlpha = 1;
 
     // Draw ball

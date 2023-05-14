@@ -1,10 +1,10 @@
 import { Ball } from "./Ball";
 import { Field } from "./Field";
-import { Player } from "./Player";
+import { Paddle } from "./Paddle";
 
 export type GameState = {
-    player1: Player,
-    player2: Player,
+    paddle1: Paddle,
+    paddle2: Paddle,
     ball: Ball,
     field: Field,
     paused: boolean,

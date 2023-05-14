@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { GameState } from "../types/GameState";
 import { Ball } from "../types/Ball";
-import { Player, PlayerDirection } from "../types/Player";
+import { Paddle, PlayerDirection } from "../types/Paddle";
 
 export const usePrediction = (
   drawGameState: (gameState: GameState) => void
@@ -18,13 +18,13 @@ export const usePrediction = (
 
       const deltaTime = time - lastTimeRef.current;
       const delta = (tickRateRef.current * deltaTime) / 1000;
-      const { ball, player1, player2, field } = predictedGameStateRef.current;
+      const { ball, paddle1, paddle2, field } = predictedGameStateRef.current;
 
       predictedGameStateRef.current = {
         ...predictedGameStateRef.current,
         ball: updatePredictedBallState(ball, delta),
-        player1: updatePredictedPlayerState(player1, delta, field.height),
-        player2: updatePredictedPlayerState(player2, delta, field.height),
+        paddle1: updatePredictedPlayerState(paddle1, delta, field.height),
+        paddle2: updatePredictedPlayerState(paddle2, delta, field.height),
       };
 
       drawGameState(predictedGameStateRef.current);
@@ -72,11 +72,11 @@ function updatePredictedBallState(ball: Ball, delta: number) {
 }
 
 function updatePredictedPlayerState(
-  player: Player,
+  paddle: Paddle,
   delta: number,
   fieldHeight: number
-): Player {
-  const { y, direction, speed, height } = player.renderData;
+): Paddle {
+  const { y, direction, speed, height } = paddle.renderData;
 
   const movement = speed * delta * speedAdjustmentFactor;
   const minPlayerY = 0;
@@ -90,5 +90,5 @@ function updatePredictedPlayerState(
     newY = Math.min(y + movement, maxPlayerY);
   }
 
-  return { ...player, renderData: { ...player.renderData, y: newY } };
+  return { ...paddle, renderData: { ...paddle.renderData, y: newY } };
 }

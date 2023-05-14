@@ -36,6 +36,12 @@ class ServerConnectionHandlerImpl(
     }
 
     override fun onStateChanged(matchId: UUID) {
-        eventBus.send("brawl-server.pong-match-state-changed", jsonObjectOf("matchId" to matchId))
+        val message = jsonObjectOf("matchId" to matchId)
+        eventBus.send("brawl-server.pong.match.state-change", message)
+    }
+
+    override fun onMatchEnd(matchId: UUID, winner: UUID) {
+        val message = jsonObjectOf("matchId" to matchId, "winner" to winner)
+        eventBus.send("brawl-server.pong.match.end", message)
     }
 }

@@ -4,7 +4,7 @@ export enum PlayerDirection {
     Down = "Down"
 }
 
-export type Player = {
+export type Paddle = {
     id: string,
     ready: boolean,
     score: number,

@@ -2,12 +2,16 @@ package io.sourceempire.brawlpong.handlers
 
 import io.sourceempire.brawlpong.exceptions.MatchAlreadyFinishedException
 import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
+import io.sourceempire.brawlpong.handlers.entities.handlePaddleCollisions
+import io.sourceempire.brawlpong.handlers.entities.handleWallCollisions
+import io.sourceempire.brawlpong.handlers.entities.updateBallPosition
+import io.sourceempire.brawlpong.handlers.entities.updatePaddlePositions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import io.sourceempire.brawlpong.listeners.MatchEventListener
 import io.sourceempire.brawlpong.models.CreateMatchRequest
-import io.sourceempire.brawlpong.models.GameState
+import io.sourceempire.brawlpong.models.entities.GameState
 import io.sourceempire.brawlpong.models.Match
 import java.util.*
 
@@ -45,9 +49,9 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
 
     override fun createMatch(createMatchRequest: CreateMatchRequest): Future<Unit> {
         val gameState = GameState.createInitialState()
-        gameState.player1.id = createMatchRequest.player1Id
-        gameState.player2.id = createMatchRequest.player2Id
-        val match = Match(createMatchRequest.matchId, gameState, true)
+        gameState.paddle1.playerId = createMatchRequest.player1Id
+        gameState.paddle2.playerId = createMatchRequest.player2Id
+        val match = Match(createMatchRequest.matchId, gameState, requiresAuthorization = true)
 
         matches[match.id] = match
         return Future.succeededFuture()
@@ -67,12 +71,13 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
 
     override fun getMatchBySocket(sockJSSocket: SockJSSocket): Match {
         return matches.values.find {
-            it.gameState.player1.connection == sockJSSocket || it.gameState.player2.connection == sockJSSocket
+            (it.gameState.paddle1.connection?.hashCode() == sockJSSocket.hashCode() ||
+                    it.gameState.paddle2.connection?.hashCode() == sockJSSocket.hashCode())
         } ?: throw MatchNotFoundException()
     }
 
     override fun getMatchByPlayer2Socket(sockJSSocket: SockJSSocket): Match {
-        return unauthorizedMatches.values.find { !it.gameState.player2.connected } ?: throw MatchNotFoundException()
+        return unauthorizedMatches.values.find { !it.gameState.paddle2.connected } ?: throw MatchNotFoundException()
     }
 
     override fun removeMatch(matchId: UUID): Match {
@@ -125,22 +130,14 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         }
     }
 
-    private fun unpauseMatch(matchId: UUID) {
-        startMatch(matchId)
-    }
-
-    private fun pauseMatch(matchId: UUID) {
-        val match = getMatchById(matchId)
-        match.gameState.paused = true
-        match.dispatchGameState()
-    }
-
     private fun onScore(match: Match) {
         match.updateWinnerIfExists()
-
-        invokeEventListenersIfAuthorized(match) {
-            it.onStateChanged(match.id)
-        }
+            .onSuccess { winner ->
+                invokeEventListenersIfAuthorized(match) { listener ->
+                    listener.onStateChanged(match.id)
+                    winner?.let { listener.onMatchEnd(match.id, it) }
+                }
+            }
     }
 
 

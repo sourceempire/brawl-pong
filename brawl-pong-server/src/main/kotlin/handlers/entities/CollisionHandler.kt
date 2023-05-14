@@ -1,4 +1,4 @@
-package io.sourceempire.brawlpong.handlers
+package io.sourceempire.brawlpong.handlers.entities
 
 import io.sourceempire.brawlpong.models.Match
 import kotlin.math.cos
@@ -9,7 +9,7 @@ fun handlePaddleCollisions(match: Match) {
     val ball = gameState.ball
 
     // Check for collisions with the paddles
-    listOf(gameState.player1, gameState.player2).forEach { paddle ->
+    listOf(gameState.paddle1, gameState.paddle2).forEach { paddle ->
         if (ball.x + ball.radius >= paddle.renderData.x && ball.x - ball.radius <= paddle.renderData.x + paddle.renderData.width
             && ball.y + ball.radius >= paddle.renderData.y && ball.y - ball.radius <= paddle.renderData.y + paddle.renderData.height
         ) {
@@ -31,7 +31,7 @@ fun handlePaddleCollisions(match: Match) {
 
             // Set the ball's new direction
             ball.dy = ball.speed * sin(bounceAngle).toFloat()
-            ball.dx = if (paddle == gameState.player1) {
+            ball.dx = if (paddle == gameState.paddle1) {
                 ball.speed * cos(bounceAngle).toFloat()
             } else {
                 -ball.speed * cos(bounceAngle).toFloat()

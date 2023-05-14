@@ -9,7 +9,7 @@ import {
   SocketMessage,
 } from "./types/SocketMessage";
 import { useConnection } from "./hooks/useConnection";
-import { PlayerInfo } from "./types/Player";
+import { PlayerInfo } from "./types/Paddle";
 
 function App() {
   const [secondsToStart, setSecondsToStart] = useState<number | null>(null);
@@ -27,6 +27,7 @@ function App() {
 
   const handleGameStateChange = useCallback(
     (message: GameStateMessageData) => {
+      console.log(message);
       stopPrediction();
 
       if (message.gameState.winner) {
@@ -40,8 +41,8 @@ function App() {
 
       startPrediction(message.gameState, message.tickRate);
 
-      setPlayer1Score(message.gameState.player1.score);
-      setPlayer2Score(message.gameState.player2.score);
+      setPlayer1Score(message.gameState.paddle1.score);
+      setPlayer2Score(message.gameState.paddle2.score);
       
     },
     [drawGameState, startPrediction, stopPrediction]

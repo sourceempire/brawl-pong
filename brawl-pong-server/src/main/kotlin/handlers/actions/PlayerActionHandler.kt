@@ -1,7 +1,11 @@
-package io.sourceempire.brawlpong.handlers
+package io.sourceempire.brawlpong.handlers.actions
 
+import io.sourceempire.brawlpong.handlers.MatchHandler
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import io.sourceempire.brawlpong.models.*
+import io.sourceempire.brawlpong.models.actions.KeyDownAction
+import io.sourceempire.brawlpong.models.actions.KeyUpAction
+import io.sourceempire.brawlpong.models.entities.Paddle
 import java.util.*
 
 fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket, matchHandler: MatchHandler) {
@@ -18,7 +22,7 @@ fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket, matchHandle
     }
 }
 
-fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyDownEvent) {
+fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyDownAction) {
     val player = getPlayerBySocket(match, sockJSSocket)
 
     when (event.key) {
@@ -27,7 +31,7 @@ fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyDownE
     }
 }
 
-fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyUpEvent) {
+fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyUpAction) {
     val player = getPlayerBySocket(match, sockJSSocket)
 
     when (event.key) {
@@ -36,20 +40,20 @@ fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyUpEvent
     }
 }
 
-private fun getPlayerBySocket(match: Match, sockJSSocket: SockJSSocket): Player? {
+private fun getPlayerBySocket(match: Match, sockJSSocket: SockJSSocket): Paddle? {
     return when (sockJSSocket) {
-        match.gameState.player1.connection -> match.gameState.player1
-        match.gameState.player2.connection -> match.gameState.player2
+        match.gameState.paddle1.connection -> match.gameState.paddle1
+        match.gameState.paddle2.connection -> match.gameState.paddle2
         else -> null
     }
 }
 
 private fun areBothPlayersReady(match: Match): Boolean {
-    return match.gameState.player1.ready && match.gameState.player2.ready
+    return match.gameState.paddle1.ready && match.gameState.paddle2.ready
 }
 
-private fun markPlayerAsReady(player: Player) {
-    player.ready = true
+private fun markPlayerAsReady(paddle: Paddle) {
+    paddle.ready = true
 }
 
 private fun startMatchCountdown(matchHandler: MatchHandler, matchId: UUID) {

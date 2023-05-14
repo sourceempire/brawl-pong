@@ -2,18 +2,25 @@ package io.sourceempire.brawlpong.models
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
+import io.sourceempire.brawlpong.models.entities.GameState
+import io.sourceempire.brawlpong.models.entities.Paddle
+import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import java.util.UUID
 
+
 data class Match(
     val id: UUID,
     val gameState: GameState,
+    val scoreToWin: Int = 2,
     @JsonIgnore
     val requiresAuthorization: Boolean = false,
-    val scoreToWin: Int = 2,
+    ) {
 
-) {
+    var winner: UUID? = null
+
+    // TODO -> Move out to some constants file
     val tickRate = 60
 
     fun dispatchGameState() {
@@ -29,20 +36,20 @@ data class Match(
             return Buffer.buffer(Json.encode(message))
         }
 
-        gameState.player1.connection?.write(createGameStateMessage())
-        gameState.player2.connection?.write(createGameStateMessage())
+        gameState.paddle1.connection?.write(createGameStateMessage())
+        gameState.paddle2.connection?.write(createGameStateMessage())
     }
 
     fun dispatchPlayerInfo() {
         fun createPlayerInfoMessage(sessionPlayerId: UUID): Buffer {
             val data = mapOf(
                 "player1" to mapOf(
-                    "id" to gameState.player1.id,
-                    "isSessionPlayer" to (gameState.player1.id == sessionPlayerId)
+                    "id" to gameState.paddle1.playerId,
+                    "isSessionPlayer" to (gameState.paddle1.playerId == sessionPlayerId)
                 ),
                 "player2" to mapOf(
-                    "id" to gameState.player2.id,
-                    "isSessionPlayer" to (gameState.player2.id == sessionPlayerId)
+                    "id" to gameState.paddle2.playerId,
+                    "isSessionPlayer" to (gameState.paddle2.playerId == sessionPlayerId)
                 ),
             )
 
@@ -55,10 +62,10 @@ data class Match(
         }
 
         // Send the game state to player 1 with the player id connected to the session
-        gameState.player1.connection?.write(createPlayerInfoMessage(gameState.player1.id))
+        gameState.paddle1.connection?.write(createPlayerInfoMessage(gameState.paddle1.playerId))
 
         // Send the game state to player 2 with the player id connected to the session
-        gameState.player2.connection?.write(createPlayerInfoMessage(gameState.player2.id))
+        gameState.paddle2.connection?.write(createPlayerInfoMessage(gameState.paddle2.playerId))
     }
 
     fun dispatchMatchCountdown(countdown: Long) {
@@ -71,32 +78,33 @@ data class Match(
         }
 
         // Send the countdown message to player 1 and player 2
-        gameState.player1.connection?.write(createCountdownMessage())
-        gameState.player2.connection?.write(createCountdownMessage())
+        gameState.paddle1.connection?.write(createCountdownMessage())
+        gameState.paddle2.connection?.write(createCountdownMessage())
     }
 
-    fun getPlayerById(playerId: UUID): Player {
-        return listOf(gameState.player1, gameState.player2).find { it.id == playerId }
+    fun getPlayerById(playerId: UUID): Paddle {
+        return listOf(gameState.paddle1, gameState.paddle2).find { it.playerId == playerId }
             ?: throw PlayerNotInMatchException()
     }
 
-    fun updateWinnerIfExists(): Boolean {
-        val player1 = gameState.player1
-        val player2 = gameState.player2
+    fun updateWinnerIfExists(): Future<UUID?> {
+        val paddle1 = gameState.paddle1
+        val paddle2 = gameState.paddle2
 
-        when {
-            player1.score == scoreToWin -> {
-                gameState.winner = player1.id
+        return when {
+            paddle1.score == scoreToWin -> {
+                gameState.winner = paddle1.playerId
                 gameState.paused = true
-                return true
+                Future.succeededFuture(paddle1.playerId)
             }
-            player2.score == scoreToWin -> {
-                gameState.winner = player2.id
+            paddle2.score == scoreToWin -> {
+                gameState.winner = paddle2.playerId
                 gameState.paused = true
-                return true
+                Future.succeededFuture(paddle2.playerId)
+            }
+            else -> {
+                Future.succeededFuture(null)
             }
         }
-
-        return false
     }
 }
