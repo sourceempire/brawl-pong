@@ -1,34 +1,34 @@
 package io.sourceempire.brawlpong.models
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import io.sourceempire.brawlpong.exceptions.PlayerPaddleSideNotSet
 import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
 import io.sourceempire.brawlpong.models.entities.GameState
-import io.sourceempire.brawlpong.models.entities.Paddle
+import io.sourceempire.brawlpong.utils.TICK_RATE
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.Json
 import java.util.UUID
-
 
 data class Match(
     val id: UUID,
     val gameState: GameState,
     val scoreToWin: Int = 2,
     @JsonIgnore
-    val requiresAuthorization: Boolean = false,
-    ) {
+    val requiresAuthorization: Boolean = false
+) {
+    val players: MutableMap<UUID, Player> = HashMap()
 
     var winner: UUID? = null
-
-    // TODO -> Move out to some constants file
-    val tickRate = 60
 
     fun dispatchGameState() {
         fun createGameStateMessage(): Buffer {
             val data = mapOf(
-                "tickRate" to tickRate,
+                "tickRate" to TICK_RATE,
                 "gameState" to gameState,
+                "winner" to winner
             )
+
             val message = mapOf(
                 "type" to "game-state",
                 "data" to data
@@ -36,21 +36,48 @@ data class Match(
             return Buffer.buffer(Json.encode(message))
         }
 
-        gameState.paddle1.connection?.write(createGameStateMessage())
-        gameState.paddle2.connection?.write(createGameStateMessage())
+        players.values.forEach { it.connection?.write(createGameStateMessage()) }
+    }
+
+    fun dispatchStats() {
+        fun createGameStatsMessage(): Buffer {
+            return Buffer.buffer(
+                Json.encode(
+                    mapOf(
+                        "type" to "stats",
+                        "data" to mapOf(
+                            "winner" to winner,
+                            "score" to mapOf(
+                                "leftPaddle" to players.values.find { it.paddleSide == PaddleSide.Left }!!.score,
+                                "rightPaddle" to players.values.find { it.paddleSide == PaddleSide.Right }!!.score
+                            ),
+                        )
+                    )
+                )
+            )
+        }
+
+        players.values.forEach { it.connection!!.write(createGameStatsMessage()) }
     }
 
     fun dispatchPlayerInfo() {
-        fun createPlayerInfoMessage(sessionPlayerId: UUID): Buffer {
+        fun createPlayerInfoMessage(player: Player): Buffer {
+            val leftPaddlePlayer = players.values.find { it.paddleSide == PaddleSide.Left }!!
+            val rightPaddlePlayer = players.values.find { it.paddleSide == PaddleSide.Right }
+
             val data = mapOf(
-                "player1" to mapOf(
-                    "id" to gameState.paddle1.playerId,
-                    "isSessionPlayer" to (gameState.paddle1.playerId == sessionPlayerId)
+                "leftPaddle" to mapOf(
+                    "id" to leftPaddlePlayer.id,
+                    "ready" to leftPaddlePlayer.ready,
+                    "connected" to leftPaddlePlayer.connected,
+                    "isSessionPlayer" to (player.paddleSide == PaddleSide.Left)
                 ),
-                "player2" to mapOf(
-                    "id" to gameState.paddle2.playerId,
-                    "isSessionPlayer" to (gameState.paddle2.playerId == sessionPlayerId)
-                ),
+                "rightPaddle" to if (rightPaddlePlayer != null) mapOf(
+                    "id" to rightPaddlePlayer.id,
+                    "ready" to rightPaddlePlayer.ready,
+                    "connected" to rightPaddlePlayer.connected,
+                    "isSessionPlayer" to (player.paddleSide == PaddleSide.Right)
+                ) else null,
             )
 
             val message = mapOf(
@@ -61,11 +88,13 @@ data class Match(
             return Buffer.buffer(Json.encode(message))
         }
 
-        // Send the game state to player 1 with the player id connected to the session
-        gameState.paddle1.connection?.write(createPlayerInfoMessage(gameState.paddle1.playerId))
+        val leftPaddlePlayer = players.values.find { it.paddleSide == PaddleSide.Left }
+        val rightPaddlePlayer = players.values.find { it.paddleSide == PaddleSide.Right }
 
+        // Send the game state to player 1 with the player id connected to the session
+        leftPaddlePlayer?.connection?.write(createPlayerInfoMessage(leftPaddlePlayer))
         // Send the game state to player 2 with the player id connected to the session
-        gameState.paddle2.connection?.write(createPlayerInfoMessage(gameState.paddle2.playerId))
+        rightPaddlePlayer?.connection?.write(createPlayerInfoMessage(rightPaddlePlayer))
     }
 
     fun dispatchMatchCountdown(countdown: Long) {
@@ -77,30 +106,31 @@ data class Match(
             return Buffer.buffer(Json.encode(message))
         }
 
-        // Send the countdown message to player 1 and player 2
-        gameState.paddle1.connection?.write(createCountdownMessage())
-        gameState.paddle2.connection?.write(createCountdownMessage())
+        players.values.forEach { it.connection?.write(createCountdownMessage()) }
     }
 
-    fun getPlayerById(playerId: UUID): Paddle {
-        return listOf(gameState.paddle1, gameState.paddle2).find { it.playerId == playerId }
-            ?: throw PlayerNotInMatchException()
+    fun getPlayerById(playerId: UUID): Player {
+        return players[playerId]?: throw PlayerNotInMatchException()
     }
 
     fun updateWinnerIfExists(): Future<UUID?> {
-        val paddle1 = gameState.paddle1
-        val paddle2 = gameState.paddle2
+        val leftPlayer = players.values.find { it.paddleSide == PaddleSide.Left }?: throw PlayerPaddleSideNotSet(PaddleSide.Left)
+        val rightPlayer = players.values.find { it.paddleSide == PaddleSide.Right }?: throw PlayerPaddleSideNotSet(PaddleSide.Right)
 
         return when {
-            paddle1.score == scoreToWin -> {
-                gameState.winner = paddle1.playerId
+            leftPlayer.score == scoreToWin -> {
+                winner = leftPlayer.id
+                dispatchStats()
                 gameState.paused = true
-                Future.succeededFuture(paddle1.playerId)
+                dispatchGameState()
+                Future.succeededFuture(leftPlayer.id)
             }
-            paddle2.score == scoreToWin -> {
-                gameState.winner = paddle2.playerId
+            rightPlayer.score == scoreToWin -> {
+                winner = rightPlayer.id
+                dispatchStats()
                 gameState.paused = true
-                Future.succeededFuture(paddle2.playerId)
+                dispatchGameState()
+                Future.succeededFuture(rightPlayer.id)
             }
             else -> {
                 Future.succeededFuture(null)

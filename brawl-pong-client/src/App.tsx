@@ -7,6 +7,7 @@ import {
   GameStateMessageData,
   PlayerInfoMessageData,
   SocketMessage,
+  StatsMessageData,
 } from "./types/SocketMessage";
 import { useConnection } from "./hooks/useConnection";
 import { PlayerInfo } from "./types/Paddle";
@@ -30,32 +31,33 @@ function App() {
       console.log(message);
       stopPrediction();
 
-      if (message.gameState.winner) {
-        setWinner(message.gameState.winner)
-      }
-
       if (message.gameState.paused) {
         drawGameState(message.gameState);
-        return
+        return;
       }
 
       startPrediction(message.gameState, message.tickRate);
-
-      setPlayer1Score(message.gameState.paddle1.score);
-      setPlayer2Score(message.gameState.paddle2.score);
-      
     },
     [drawGameState, startPrediction, stopPrediction]
   );
 
   const handlePlayerInfo = useCallback((message: PlayerInfoMessageData) => {
-    setPlayer1Info(message.player1)
-    setPlayer2Info(message.player2)
-  }, [])
+    setPlayer1Info(message.leftPaddle);
+    setPlayer2Info(message.rightPaddle);
+  }, []);
 
   const handleCountDown = useCallback((message: CountDownMessageData) => {
     setSecondsToStart(message.countdown);
   }, []);
+
+  const handleStatsMessage = useCallback((message: StatsMessageData) => {
+    if (message.winner) {
+      setWinner(message.winner);
+    }
+
+    setPlayer1Score(message.score.leftPaddle);
+    setPlayer2Score(message.score.rightPaddle);
+  }, [])
 
   // It is very important that onMessage is never recreated
   const onMessage = useCallback(
@@ -70,9 +72,12 @@ function App() {
         case "player-info":
           handlePlayerInfo(message.data);
           break;
+        case "stats":
+          handleStatsMessage(message.data)
+          break;
       }
     },
-    [handleCountDown, handleGameStateChange, handlePlayerInfo]
+    [handleCountDown, handleGameStateChange, handlePlayerInfo, handleStatsMessage]
   );
 
   const { socket } = useConnection({ onMessage });
@@ -85,9 +90,19 @@ function App() {
         {player1Info?.isSessionPlayer && (
           <div className="player-info left">This is you</div>
         )}
+
+        {!player1Info?.connected && (
+          <div className="player-info left">(not connected)</div>
+        )}
+
         <canvas className="game-field" ref={canvasRef}></canvas>
         {player2Info?.isSessionPlayer && (
-          <div className="player-info right">This is you</div>
+          <div className="player-info right">
+            This is you {!player2Info.connected && "(not connected)"}
+          </div>
+        )}
+        {!player2Info?.connected && (
+          <div className="player-info right">(not connected)</div>
         )}
       </div>
       {secondsToStart !== null && <div>Seconds to start: {secondsToStart}</div>}
@@ -97,8 +112,8 @@ function App() {
         Im ready
       </button>
 
-      { winner === player1Info?.id && <div>Player 1 won</div>}
-      { winner === player2Info?.id && <div>Player 2 won</div>}
+      {winner === player1Info?.id && <div>Player 1 won</div>}
+      {winner === player2Info?.id && <div>Player 2 won</div>}
     </div>
   );
 }

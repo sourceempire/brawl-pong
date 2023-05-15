@@ -3,8 +3,8 @@ import { Field } from "./Field";
 import { Paddle } from "./Paddle";
 
 export type GameState = {
-    paddle1: Paddle,
-    paddle2: Paddle,
+    leftPaddle: Paddle,
+    rightPaddle: Paddle,
     ball: Ball,
     field: Field,
     paused: boolean,

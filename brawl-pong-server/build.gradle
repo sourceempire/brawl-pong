@@ -30,18 +30,16 @@ shadowJar {
 }
 
 dependencies {
+    // Vert.x
     implementation 'io.vertx:vertx-core:4.4.1'
     implementation "io.vertx:vertx-lang-kotlin:4.4.1"
-
     implementation 'io.vertx:vertx-web:4.4.1'
     implementation 'io.vertx:vertx-web-client:4.4.1'
-
     implementation 'io.vertx:vertx-sockjs-service-proxy:4.4.1'
-
     implementation 'io.vertx:vertx-auth-jwt:4.4.1'
-
     implementation 'io.vertx:vertx-zookeeper:4.4.1'
 
+    // Jackson
     implementation "com.fasterxml.jackson.core:jackson-databind:2.14.0"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1"
 
@@ -49,13 +47,13 @@ dependencies {
     testImplementation "io.vertx:vertx-junit5:4.4.1"
 }
 
-tasks.register('installPongDependencies', NpmTask) {
-    args = ['install']
-    workingDir = file('../brawl-pong-client')
-}
+//tasks.register('installPongDependencies', NpmTask) {
+//    args = ['install']
+//    workingDir = file('../brawl-pong-client')
+//}
 
 tasks.register('buildPong', NpmTask) {
-    dependsOn installPongDependencies
+    // dependsOn installPongDependencies
     args = ['run', 'build']
     workingDir = file('../brawl-pong-client')
 }

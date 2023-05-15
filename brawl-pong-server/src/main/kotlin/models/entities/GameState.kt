@@ -1,17 +1,14 @@
 package io.sourceempire.brawlpong.models.entities
 
-import java.util.*
-
 // TODO -> Should only include paddles, ball, field, and paused.
 
 
 data class GameState(
-    val paddle1: Paddle,
-    val paddle2: Paddle,
+    val leftPaddle: Paddle,
+    val rightPaddle: Paddle,
     val ball: Ball,
     val field: Field,
-    var paused: Boolean = true,
-    var winner: UUID? = null,
+    var paused: Boolean = true
 ) {
     companion object {
         fun createInitialState(): GameState {
@@ -30,14 +27,14 @@ data class GameState(
             val playerY = fieldHeight / 2 - 50f
 
             // Create the player1 object with its x and y positions
-            val paddle1 = Paddle(
+            val leftPaddle = Paddle(
                 x = player1X,
                 y = playerY,
                 speed = 5f,
             )
 
             // Create the player2 object with its x and y positions
-            val paddle2 = Paddle(
+            val rightPaddle = Paddle(
                 x = player2X,
                 y = playerY,
                 speed = 5f
@@ -61,7 +58,7 @@ data class GameState(
             )
 
             // Return the GameState object with the created player1, player2, ball, and field objects
-            return GameState(paddle1, paddle2, ball, field)
+            return GameState(leftPaddle, rightPaddle, ball, field)
         }
     }
 

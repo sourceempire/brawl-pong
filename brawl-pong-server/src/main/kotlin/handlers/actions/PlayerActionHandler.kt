@@ -1,5 +1,6 @@
 package io.sourceempire.brawlpong.handlers.actions
 
+import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
 import io.sourceempire.brawlpong.handlers.MatchHandler
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import io.sourceempire.brawlpong.models.*
@@ -9,11 +10,12 @@ import io.sourceempire.brawlpong.models.entities.Paddle
 import java.util.*
 
 fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket, matchHandler: MatchHandler) {
-    val player = getPlayerBySocket(match, sockJSSocket)
+    val player = match.players.values.find { it.connection == sockJSSocket }
 
     if (player == null || areBothPlayersReady(match)) {
         return
     }
+
     markPlayerAsReady(player)
     match.dispatchGameState()
 
@@ -23,7 +25,7 @@ fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket, matchHandle
 }
 
 fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyDownAction) {
-    val player = getPlayerBySocket(match, sockJSSocket)
+    val player = getPaddleBySocket(match, sockJSSocket)
 
     when (event.key) {
         "ArrowUp" -> player?.upKeyPressed = true
@@ -32,7 +34,7 @@ fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyDownA
 }
 
 fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyUpAction) {
-    val player = getPlayerBySocket(match, sockJSSocket)
+    val player = getPaddleBySocket(match, sockJSSocket)
 
     when (event.key) {
         "ArrowUp" -> player?.upKeyPressed = false
@@ -40,20 +42,23 @@ fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, event: KeyUpActio
     }
 }
 
-private fun getPlayerBySocket(match: Match, sockJSSocket: SockJSSocket): Paddle? {
-    return when (sockJSSocket) {
-        match.gameState.paddle1.connection -> match.gameState.paddle1
-        match.gameState.paddle2.connection -> match.gameState.paddle2
-        else -> null
+private fun getPaddleBySocket(match: Match, sockJSSocket: SockJSSocket): Paddle? {
+    val player = match.players.values.find {
+        it.connection.hashCode() == sockJSSocket.hashCode()
+    }?: throw PlayerNotInMatchException()
+
+    return when (player.paddleSide) {
+        PaddleSide.Left -> match.gameState.leftPaddle
+        PaddleSide.Right -> match.gameState.rightPaddle
     }
 }
 
 private fun areBothPlayersReady(match: Match): Boolean {
-    return match.gameState.paddle1.ready && match.gameState.paddle2.ready
+    return match.players.values.all { it.ready }
 }
 
-private fun markPlayerAsReady(paddle: Paddle) {
-    paddle.ready = true
+private fun markPlayerAsReady(player: Player) {
+    player.ready = true
 }
 
 private fun startMatchCountdown(matchHandler: MatchHandler, matchId: UUID) {

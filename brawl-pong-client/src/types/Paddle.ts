@@ -5,22 +5,18 @@ export enum PlayerDirection {
 }
 
 export type Paddle = {
-    id: string,
-    ready: boolean,
-    score: number,
-    connected: boolean,
-    renderData: {
-        x: number,
-        y: number,
-        direction: PlayerDirection,
-        height: number,
-        width: number,
-        speed: number,
-    }
+    x: number,
+    y: number,
+    direction: PlayerDirection,
+    height: number,
+    width: number,
+    speed: number,
 }
 
 export type PlayerInfo = {
     id: string
+    ready: boolean,
+    connected: boolean,
     isSessionPlayer: boolean,
 }
 

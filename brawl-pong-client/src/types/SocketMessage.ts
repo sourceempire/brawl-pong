@@ -1,14 +1,9 @@
 import { GameState } from "./GameState";
+import { PlayerInfo } from "./Paddle";
 
 export type PlayerInfoMessageData = {
-  player1: {
-    id: string,
-    isSessionPlayer: boolean;
-  },
-  player2: {
-    id: string,
-    isSessionPlayer: boolean;
-  },
+  leftPaddle: PlayerInfo,
+  rightPaddle: PlayerInfo | null,
 }
 
 export type CountDownMessageData = {
@@ -16,21 +11,33 @@ export type CountDownMessageData = {
 }
 
 export type GameStateMessageData = {
-    tickRate: number;
-    gameState: GameState;
+  tickRate: number;
+  gameState: GameState;
+}
+
+export type StatsMessageData = {
+  winner?: string;
+  score: {
+    leftPaddle: number;
+    rightPaddle: number;
+  }
 }
 
 
 export type SocketMessage =
-  | { 
-      type: 'player-info';
-      data: PlayerInfoMessageData;
-    }
   | {
-      type: "game-state";
-      data: GameStateMessageData;
-    }
+    type: 'player-info';
+    data: PlayerInfoMessageData;
+  }
   | {
-      type: "match-countdown";
-      data: CountDownMessageData
-    };
+    type: "game-state";
+    data: GameStateMessageData;
+  }
+  | {
+    type: "match-countdown";
+    data: CountDownMessageData
+  }
+  | {
+    type: "stats";
+    data: StatsMessageData;
+  };

@@ -10,6 +10,8 @@ import io.netty.handler.codec.http.QueryStringDecoder
 import io.sourceempire.brawlpong.handlers.actions.handleKeyDownEvent
 import io.sourceempire.brawlpong.handlers.actions.handleKeyUpEvent
 import io.sourceempire.brawlpong.handlers.actions.handlePlayerReadyEvent
+import io.sourceempire.brawlpong.models.PaddleSide
+import io.sourceempire.brawlpong.models.Player
 import io.sourceempire.brawlpong.models.actions.ClientAction
 import io.sourceempire.brawlpong.models.actions.KeyDownAction
 import io.sourceempire.brawlpong.models.actions.KeyUpAction
@@ -74,23 +76,22 @@ class ClientConnectionHandler(
     }
 
     private fun handleUnauthorizedConnection(sockJSSocket: SockJSSocket): Future<Unit> {
-        // Check if there's an available GameSession with an empty player2 slot
         return try {
-            val availableMatch = matchHandler.getMatchByPlayer2Socket(sockJSSocket)
+            val availableMatch = matchHandler.getMatchWithEmptySlot()
 
-            // If an available GameSession is found, set the connecting client as player2
-            availableMatch.gameState.paddle2.connection = sockJSSocket
-            availableMatch.dispatchGameState()
+            val player = Player(PaddleSide.Right)
+            player.connection = sockJSSocket
 
-            Future.succeededFuture()
+            return matchHandler.addPlayer(availableMatch.id, player)
+
         } catch (error: Throwable) {
             if (error is MatchNotFoundException) {
-                // If there's no available GameSession, create a new one and set the connecting client as player1
                 val match = matchHandler.createMatch()
-                match.gameState.paddle1.connection = sockJSSocket
-                match.dispatchGameState()
 
-                Future.succeededFuture()
+                val player = Player(PaddleSide.Left)
+                player.connection = sockJSSocket
+
+                return matchHandler.addPlayer(match.id, player)
             } else {
                 Future.failedFuture(error)
             }

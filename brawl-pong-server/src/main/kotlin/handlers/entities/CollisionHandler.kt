@@ -9,9 +9,9 @@ fun handlePaddleCollisions(match: Match) {
     val ball = gameState.ball
 
     // Check for collisions with the paddles
-    listOf(gameState.paddle1, gameState.paddle2).forEach { paddle ->
-        if (ball.x + ball.radius >= paddle.renderData.x && ball.x - ball.radius <= paddle.renderData.x + paddle.renderData.width
-            && ball.y + ball.radius >= paddle.renderData.y && ball.y - ball.radius <= paddle.renderData.y + paddle.renderData.height
+    listOf(gameState.leftPaddle, gameState.rightPaddle).forEach { paddle ->
+        if (ball.x + ball.radius >= paddle.x && ball.x - ball.radius <= paddle.x + paddle.width
+            && ball.y + ball.radius >= paddle.y && ball.y - ball.radius <= paddle.y + paddle.height
         ) {
             // If the ball hasn't touched a paddle yet, give it a new speed
             if (!ball.touchedPaddle) {
@@ -20,7 +20,7 @@ fun handlePaddleCollisions(match: Match) {
             }
 
             // Calculate the relative hit position on the paddle (0: top, 1: bottom)
-            val relativeHitPosition = ((ball.y - paddle.renderData.y) / paddle.renderData.height).coerceIn(0f, 1f)
+            val relativeHitPosition = ((ball.y - paddle.y) / paddle.height).coerceIn(0f, 1f)
 
             // Calculate the bounce angle based on the relative hit position
             // Ensure the angle is between -paddleCollisionOffset and paddleCollisionOffset
@@ -31,7 +31,7 @@ fun handlePaddleCollisions(match: Match) {
 
             // Set the ball's new direction
             ball.dy = ball.speed * sin(bounceAngle).toFloat()
-            ball.dx = if (paddle == gameState.paddle1) {
+            ball.dx = if (paddle == gameState.leftPaddle) {
                 ball.speed * cos(bounceAngle).toFloat()
             } else {
                 -ball.speed * cos(bounceAngle).toFloat()

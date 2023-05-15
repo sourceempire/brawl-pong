@@ -18,13 +18,13 @@ export const usePrediction = (
 
       const deltaTime = time - lastTimeRef.current;
       const delta = (tickRateRef.current * deltaTime) / 1000;
-      const { ball, paddle1, paddle2, field } = predictedGameStateRef.current;
+      const { ball, leftPaddle, rightPaddle, field } = predictedGameStateRef.current;
 
       predictedGameStateRef.current = {
         ...predictedGameStateRef.current,
         ball: updatePredictedBallState(ball, delta),
-        paddle1: updatePredictedPlayerState(paddle1, delta, field.height),
-        paddle2: updatePredictedPlayerState(paddle2, delta, field.height),
+        leftPaddle: updatePredictedPlayerState(leftPaddle, delta, field.height),
+        rightPaddle: updatePredictedPlayerState(rightPaddle, delta, field.height),
       };
 
       drawGameState(predictedGameStateRef.current);
@@ -76,7 +76,7 @@ function updatePredictedPlayerState(
   delta: number,
   fieldHeight: number
 ): Paddle {
-  const { y, direction, speed, height } = paddle.renderData;
+  const { y, direction, speed, height } = paddle;
 
   const movement = speed * delta * speedAdjustmentFactor;
   const minPlayerY = 0;
@@ -90,5 +90,5 @@ function updatePredictedPlayerState(
     newY = Math.min(y + movement, maxPlayerY);
   }
 
-  return { ...paddle, renderData: { ...paddle.renderData, y: newY } };
+  return { ...paddle, y: newY } ;
 }

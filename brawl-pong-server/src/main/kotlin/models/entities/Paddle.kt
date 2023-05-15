@@ -6,26 +6,15 @@ import com.fasterxml.jackson.annotation.JsonManagedReference
 import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import java.util.UUID
 
-data class Paddle(
-    var playerId: UUID = UUID.randomUUID(),
-) {
+class Paddle(val x: Float,
+             var y: Float,
+             val speed: Float,
+             val height: Int = 100,
+             val width: Int = 20) {
     enum class Direction {
         Stop,
         Up,
         Down
-    }
-
-    @JsonManagedReference
-    lateinit var renderData: PlayerRenderData
-
-    constructor(
-        x: Float,
-        y: Float,
-        speed: Float,
-        height: Int = 100,
-        width: Int = 20
-    ) : this() {
-        renderData = PlayerRenderData(this, x, y, speed, height, width)
     }
 
     @JsonIgnore
@@ -34,33 +23,12 @@ data class Paddle(
     @JsonIgnore
     var downKeyPressed: Boolean = false
 
-    @JsonIgnore
-    var connection: SockJSSocket? = null
-
-    var score = 0
-
-    var ready: Boolean = false
-
-    val connected: Boolean
-        get() = connection != null
-
-
-    data class PlayerRenderData(
-        @JsonBackReference
-        val paddle: Paddle,
-        var x: Float,
-        var y: Float,
-        var speed: Float,
-        val height: Int = 100,
-        val width: Int = 20
-    ) {
-        val direction: Direction
-            get() = when {
-                paddle.upKeyPressed && !paddle.downKeyPressed -> Direction.Up
-                !paddle.upKeyPressed && paddle.downKeyPressed -> Direction.Down
-                else -> Direction.Stop
-            }
-    }
+    val direction: Direction
+        get() = when {
+            upKeyPressed && !downKeyPressed -> Direction.Up
+            !upKeyPressed && downKeyPressed -> Direction.Down
+            else -> Direction.Stop
+        }
 }
 
 
