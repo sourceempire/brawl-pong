@@ -17,11 +17,17 @@ fun updateBallPosition(match: Match, onScore: (match: Match) -> Unit) {
 
     val ballDiameter = ball.radius * 2
 
-    fun handleScore(paddle: Player) {
-        paddle.score += 1
+    fun handleScore(player: Player) {
+        player.score += 1
         gameState.resetBall()
-        match.dispatchGameState()
-        match.dispatchStats()
+
+        val winningPlayer = match.players.values.find { it.score == match.scoreToWin }
+
+        if (winningPlayer != null) {
+            match.gameState.paused = true
+            match.winner = winningPlayer.id
+        }
+
         onScore(match)
     }
 
@@ -34,3 +40,4 @@ fun updateBallPosition(match: Match, onScore: (match: Match) -> Unit) {
         handleScore(match.players.values.find { it.paddleSide == PaddleSide.Right }!!)
     }
 }
+

@@ -14,13 +14,12 @@ data class Match(
     val id: UUID,
     val gameState: GameState,
     val scoreToWin: Int = 2,
+    var winner: UUID? = null,
+    val players: MutableMap<UUID, Player> = HashMap(),
     @JsonIgnore
     val requiresAuthorization: Boolean = false
 ) {
-    val players: MutableMap<UUID, Player> = HashMap()
-
-    var winner: UUID? = null
-
+    
     fun dispatchGameState() {
         fun createGameStateMessage(): Buffer {
             val data = mapOf(
@@ -111,30 +110,5 @@ data class Match(
 
     fun getPlayerById(playerId: UUID): Player {
         return players[playerId]?: throw PlayerNotInMatchException()
-    }
-
-    fun updateWinnerIfExists(): Future<UUID?> {
-        val leftPlayer = players.values.find { it.paddleSide == PaddleSide.Left }?: throw PlayerPaddleSideNotSet(PaddleSide.Left)
-        val rightPlayer = players.values.find { it.paddleSide == PaddleSide.Right }?: throw PlayerPaddleSideNotSet(PaddleSide.Right)
-
-        return when {
-            leftPlayer.score == scoreToWin -> {
-                winner = leftPlayer.id
-                dispatchStats()
-                gameState.paused = true
-                dispatchGameState()
-                Future.succeededFuture(leftPlayer.id)
-            }
-            rightPlayer.score == scoreToWin -> {
-                winner = rightPlayer.id
-                dispatchStats()
-                gameState.paused = true
-                dispatchGameState()
-                Future.succeededFuture(rightPlayer.id)
-            }
-            else -> {
-                Future.succeededFuture(null)
-            }
-        }
     }
 }

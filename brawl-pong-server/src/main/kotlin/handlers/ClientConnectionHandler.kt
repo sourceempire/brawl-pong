@@ -16,6 +16,7 @@ import io.sourceempire.brawlpong.models.actions.ClientAction
 import io.sourceempire.brawlpong.models.actions.KeyDownAction
 import io.sourceempire.brawlpong.models.actions.KeyUpAction
 import io.sourceempire.brawlpong.models.actions.ReadyAction
+import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -54,8 +55,8 @@ class ClientConnectionHandler(
             handleAuthorizedConnection(sockJSSocket, token)
         } else {
             handleUnauthorizedConnection(sockJSSocket)
-        }.onSuccess {
-            matchHandler.getMatchBySocket(sockJSSocket).dispatchPlayerInfo()
+        }.onFailure {
+            it.printStackTrace()
         }
     }
 
@@ -63,10 +64,7 @@ class ClientConnectionHandler(
         return auth.validateBrawlToken(token)
             .compose { authInfo ->
                 try {
-                    val match = matchHandler.getAuthorizedMatch(authInfo.matchId)
-                    match.getPlayerById(authInfo.playerId).connection = sockJSSocket
-                    match.dispatchGameState()
-                    Future.succeededFuture<Unit>()
+                    matchHandler.addPlayerConnection(authInfo.matchId, authInfo.playerId, sockJSSocket)
                 } catch (error: Throwable) {
                     Future.failedFuture(error)
                 }
@@ -78,20 +76,20 @@ class ClientConnectionHandler(
     private fun handleUnauthorizedConnection(sockJSSocket: SockJSSocket): Future<Unit> {
         return try {
             val availableMatch = matchHandler.getMatchWithEmptySlot()
-
             val player = Player(PaddleSide.Right)
-            player.connection = sockJSSocket
 
-            return matchHandler.addPlayer(availableMatch.id, player)
+            matchHandler.addPlayer(availableMatch.id, player).compose {
+                matchHandler.addPlayerConnection(availableMatch.id, player.id, sockJSSocket)
+            }
 
         } catch (error: Throwable) {
             if (error is MatchNotFoundException) {
                 val match = matchHandler.createMatch()
-
                 val player = Player(PaddleSide.Left)
-                player.connection = sockJSSocket
 
-                return matchHandler.addPlayer(match.id, player)
+                matchHandler.addPlayer(match.id, player).compose {
+                    matchHandler.addPlayerConnection(match.id, player.id, sockJSSocket)
+                }
             } else {
                 Future.failedFuture(error)
             }

@@ -3,6 +3,7 @@ package io.sourceempire.brawlpong.handlers
 import io.sourceempire.brawlpong.exceptions.MatchAlreadyFinishedException
 import io.sourceempire.brawlpong.exceptions.MatchFullException
 import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
+import io.sourceempire.brawlpong.exceptions.PlayerNotInMatchException
 import io.sourceempire.brawlpong.handlers.entities.handlePaddleCollisions
 import io.sourceempire.brawlpong.handlers.entities.handleWallCollisions
 import io.sourceempire.brawlpong.handlers.entities.updateBallPosition
@@ -37,14 +38,13 @@ interface MatchHandler {
     fun registerMatchEventListener(listener: MatchEventListener)
 
     fun addPlayer(matchId: UUID, player: Player): Future<Unit>
-
+    fun addPlayerConnection(matchId: UUID, playerId: UUID, sockJSSocket: SockJSSocket): Future<Unit>
 }
 
 class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     private val matches = mutableMapOf<UUID, Match>()
-    private val authorizedMatches get() = matches.filter { it.value.requiresAuthorization }
-    private val unauthorizedMatches get() = matches.filter { !it.value.requiresAuthorization }
-
+    private val authorizedMatches get() = matches.filter { it.value.requiresAuthorization }.toMap()
+    private val unauthorizedMatches get() = matches.filter { !it.value.requiresAuthorization }.toMap()
     private val matchEventListeners = mutableListOf<MatchEventListener>()
 
     override fun createMatch(): Match {
@@ -57,13 +57,13 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     override fun createMatch(createMatchRequest: CreateMatchRequest): Future<Unit> {
         val gameState = GameState.createInitialState()
         val player1 = Player(PaddleSide.Left, createMatchRequest.player1Id)
-        val player2 = Player(PaddleSide.Right, createMatchRequest.player1Id)
+        val player2 = Player(PaddleSide.Right, createMatchRequest.player2Id)
 
         val match = Match(createMatchRequest.matchId, gameState, requiresAuthorization = true)
+        matches[match.id] = match
 
         return CompositeFuture.all(addPlayer(match.id, player1), addPlayer(match.id, player2))
-            .compose {
-                matches[match.id] = match
+            .compose{
                 Future.succeededFuture()
             }
     }
@@ -130,6 +130,15 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         return Future.succeededFuture()
     }
 
+    override fun addPlayerConnection(matchId: UUID, playerId: UUID, sockJSSocket: SockJSSocket): Future<Unit> {
+        val match = matches[matchId]?: return Future.failedFuture(MatchNotFoundException())
+        val player = match.players[playerId]?: return Future.failedFuture(PlayerNotInMatchException())
+        player.connection = sockJSSocket
+        match.dispatchGameState()
+        match.dispatchPlayerInfo()
+        return Future.succeededFuture()
+    }
+
     private fun startMatch(matchId: UUID) {
         val match = getMatchById(matchId)
 
@@ -139,11 +148,8 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
 
         // Set the paused state to false
         match.gameState.paused = false
-
-        // Start the game by enabling movement and updating game state
         match.dispatchGameState()
-
-        vertx.setPeriodic(1000L / TICK_RATE) { timerId ->
+        vertx.setPeriodic(0,1000L / TICK_RATE) { timerId ->
             if (match.gameState.paused) {
                 // Cancel the timer when the game is paused
                 match.dispatchGameState()
@@ -155,23 +161,29 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     }
 
     private fun onScore(match: Match) {
-        match.updateWinnerIfExists()
-            .onSuccess { winner ->
-                invokeEventListenersIfAuthorized(match) { listener ->
-                    listener.onStateChanged(match.id)
-                    winner?.let {
-                        listener.onMatchEnd(match.id, it)
-                    }
-                }
+        match.dispatchGameState()
+        match.dispatchStats()
+
+        invokeEventListenersIfAuthorized(match) { listener ->
+            val winner = match.winner
+
+            if (winner == null) {
+                listener.onStateChanged(match.id)
+            } else {
+                listener.onMatchEnd(match.id, winner)
             }
+        }
     }
 
+    private fun onCollision(match: Match) {
+        match.dispatchGameState()
+    }
 
     private fun updateGameState(match: Match) {
         updatePaddlePositions(match)
         updateBallPosition(match, ::onScore)
-        handlePaddleCollisions(match)
-        handleWallCollisions(match)
+        handlePaddleCollisions(match, ::onCollision)
+        handleWallCollisions(match, ::onCollision)
     }
 
     private fun invokeEventListenersIfAuthorized(match: Match, event: (MatchEventListener) -> Unit) {

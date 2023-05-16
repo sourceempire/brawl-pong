@@ -1,10 +1,11 @@
 package io.sourceempire.brawlpong.handlers.entities
 
 import io.sourceempire.brawlpong.models.Match
+import java.util.UUID
 import kotlin.math.cos
 import kotlin.math.sin
 
-fun handlePaddleCollisions(match: Match) {
+fun handlePaddleCollisions(match: Match, onCollision: (match: Match) -> Unit) {
     val gameState = match.gameState
     val ball = gameState.ball
 
@@ -38,22 +39,25 @@ fun handlePaddleCollisions(match: Match) {
             }
 
             ball.setSpeed(previousSpeed)
-            match.dispatchGameState()
+            onCollision(match)
+            // match.dispatchGameState()
         }
     }
 }
 
-fun handleWallCollisions(match: Match) {
+fun handleWallCollisions(match: Match, onCollision: (match: Match) -> Unit) {
     val gameState = match.gameState
     val ball = gameState.ball
     // Check for collisions with the top and bottom of the field
     if (ball.y - ball.radius <= 0) {
         ball.dy = -ball.dy
         ball.y = ball.radius // Make sure the ball doesn't go past the top wall
-        match.dispatchGameState()
+        onCollision(match)
+        // match.dispatchGameState()
     } else if (ball.y + ball.radius >= gameState.field.height) {
         ball.dy = -ball.dy
         ball.y = gameState.field.height - ball.radius // Make sure the ball doesn't go past the bottom wall
-        match.dispatchGameState()
+        onCollision(match)
+        // match.dispatchGameState()
     }
 }

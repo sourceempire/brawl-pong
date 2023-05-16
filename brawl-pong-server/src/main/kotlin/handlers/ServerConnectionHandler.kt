@@ -26,7 +26,6 @@ class ServerConnectionHandlerImpl(
     init {
         eventBus.consumer<JsonObject>("brawl-pong.create-match").handler { message ->
             val request = CreateMatchRequest(message.body())
-
             matchHandler.createMatch(request).onSuccess {
                 message.reply(jsonObjectOf("serverAddress" to "${getEnvProperty("THIS_SERVER_URL")}:${getEnvProperty("HTTP_PORT")}/match/"))
             }.onFailure {

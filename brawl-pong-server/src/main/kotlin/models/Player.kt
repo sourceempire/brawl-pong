@@ -14,6 +14,8 @@ data class Player(
     val id: UUID = UUID.randomUUID(),
     var score: Int = 0
 ) {
+
+    // TODO -> handle disconnect (https://chat.openai.com/c/e59dac15-920f-4233-9d6e-97e424f028b2)
     val connected: Boolean get() = connection != null
     var ready: Boolean = false
 
