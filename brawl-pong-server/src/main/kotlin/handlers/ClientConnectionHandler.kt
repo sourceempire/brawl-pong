@@ -7,16 +7,9 @@ import io.vertx.ext.web.handler.sockjs.SockJSSocket
 import io.sourceempire.brawlpong.auth.Auth
 import io.sourceempire.brawlpong.exceptions.MatchNotFoundException
 import io.netty.handler.codec.http.QueryStringDecoder
-import io.sourceempire.brawlpong.handlers.actions.handleKeyDownEvent
-import io.sourceempire.brawlpong.handlers.actions.handleKeyUpEvent
-import io.sourceempire.brawlpong.handlers.actions.handlePlayerReadyEvent
 import io.sourceempire.brawlpong.models.PaddleSide
 import io.sourceempire.brawlpong.models.Player
-import io.sourceempire.brawlpong.models.actions.ClientAction
-import io.sourceempire.brawlpong.models.actions.KeyDownAction
-import io.sourceempire.brawlpong.models.actions.KeyUpAction
-import io.sourceempire.brawlpong.models.actions.ReadyAction
-import io.vertx.core.CompositeFuture
+import io.sourceempire.brawlpong.models.ClientAction
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -97,21 +90,8 @@ class ClientConnectionHandler(
     }
 
     private fun handleMessage(sockJSSocket: SockJSSocket, buffer: Buffer) {
-        val match = matchHandler.getMatchBySocket(sockJSSocket)
-
-        val jsonMessage = JsonObject(buffer.toString())
-
-        try {
-            when (val event = ClientAction.fromJson(jsonMessage)) {
-                is ReadyAction -> handlePlayerReadyEvent(match, sockJSSocket, matchHandler)
-                is KeyDownAction -> handleKeyDownEvent(match, sockJSSocket, event)
-                is KeyUpAction -> handleKeyUpEvent(match, sockJSSocket, event)
-            }
-        } catch (error: IllegalArgumentException) {
-            error.printStackTrace()
-        }
-
-        match.dispatchGameState()
+        val action = ClientAction.fromJson(JsonObject(buffer.toString()))
+        matchHandler.handleAction(action, sockJSSocket)
     }
 
     private fun handleClientDisconnect(sockJSSocket: SockJSSocket) {

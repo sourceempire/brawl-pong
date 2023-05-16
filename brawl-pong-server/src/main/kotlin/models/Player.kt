@@ -21,4 +21,8 @@ data class Player(
 
     @JsonIgnore
     var connection: SockJSSocket? = null
+
+    fun getPlayerStats(): PlayerStats {
+        return PlayerStats(id, score)
+    }
 }

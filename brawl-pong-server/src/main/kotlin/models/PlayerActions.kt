@@ -1,4 +1,4 @@
-package io.sourceempire.brawlpong.models.actions
+package io.sourceempire.brawlpong.models
 
 import io.vertx.core.json.JsonObject
 

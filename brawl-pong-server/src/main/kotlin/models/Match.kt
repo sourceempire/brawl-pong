@@ -19,7 +19,7 @@ data class Match(
     @JsonIgnore
     val requiresAuthorization: Boolean = false
 ) {
-    
+
     fun dispatchGameState() {
         fun createGameStateMessage(): Buffer {
             val data = mapOf(
@@ -108,7 +108,13 @@ data class Match(
         players.values.forEach { it.connection?.write(createCountdownMessage()) }
     }
 
-    fun getPlayerById(playerId: UUID): Player {
-        return players[playerId]?: throw PlayerNotInMatchException()
+    fun allPlayersReady() = players.values.all { it.ready }
+
+    fun getMatchStats(): MatchStats {
+        return MatchStats(
+            matchId = id,
+            winner = winner,
+            players = players.values.associate { player ->Pair(id, player.getPlayerStats() )}
+        )
     }
 }

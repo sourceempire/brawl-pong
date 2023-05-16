@@ -17,13 +17,19 @@ import io.sourceempire.brawlpong.models.entities.GameState
 import io.sourceempire.brawlpong.models.Match
 import io.sourceempire.brawlpong.models.PaddleSide
 import io.sourceempire.brawlpong.models.Player
+import io.sourceempire.brawlpong.models.ClientAction
+import io.sourceempire.brawlpong.models.KeyDownAction
+import io.sourceempire.brawlpong.models.KeyUpAction
+import io.sourceempire.brawlpong.models.ReadyAction
+import io.sourceempire.brawlpong.models.entities.Paddle
+import io.sourceempire.brawlpong.repos.MatchStatsRepo
 import io.sourceempire.brawlpong.utils.TICK_RATE
 import io.vertx.core.CompositeFuture
 import java.util.*
 
 interface MatchHandler {
     companion object {
-        fun create(vertx: Vertx) = MatchHandlerImpl(vertx)
+        fun create(vertx: Vertx, matchStatsRepo: MatchStatsRepo) = MatchHandlerImpl(vertx, matchStatsRepo)
     }
 
     fun createMatch(): Match
@@ -39,9 +45,11 @@ interface MatchHandler {
 
     fun addPlayer(matchId: UUID, player: Player): Future<Unit>
     fun addPlayerConnection(matchId: UUID, playerId: UUID, sockJSSocket: SockJSSocket): Future<Unit>
+
+    fun handleAction(action: ClientAction, sockJSSocket: SockJSSocket)
 }
 
-class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
+class MatchHandlerImpl(private val vertx: Vertx, private val matchStatsRepo: MatchStatsRepo) : MatchHandler {
     private val matches = mutableMapOf<UUID, Match>()
     private val authorizedMatches get() = matches.filter { it.value.requiresAuthorization }.toMap()
     private val unauthorizedMatches get() = matches.filter { !it.value.requiresAuthorization }.toMap()
@@ -61,6 +69,7 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
 
         val match = Match(createMatchRequest.matchId, gameState, requiresAuthorization = true)
         matches[match.id] = match
+        updateMatchStatsIfAuthorized(match)
 
         return CompositeFuture.all(addPlayer(match.id, player1), addPlayer(match.id, player2))
             .compose{
@@ -139,6 +148,18 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         return Future.succeededFuture()
     }
 
+    override fun handleAction(action: ClientAction, sockJSSocket: SockJSSocket) {
+        val match = getMatchBySocket(sockJSSocket)
+
+        when (action) {
+            is ReadyAction -> handlePlayerReadyEvent(match, sockJSSocket)
+            is KeyDownAction -> handleKeyDownEvent(match, sockJSSocket, action)
+            is KeyUpAction -> handleKeyUpEvent(match, sockJSSocket, action)
+        }
+
+        match.dispatchGameState()
+    }
+
     private fun startMatch(matchId: UUID) {
         val match = getMatchById(matchId)
 
@@ -164,13 +185,15 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
         match.dispatchGameState()
         match.dispatchStats()
 
-        invokeEventListenersIfAuthorized(match) { listener ->
-            val winner = match.winner
+        updateMatchStatsIfAuthorized(match).onSuccess {
+            invokeEventListenersIfAuthorized(match) { listener ->
+                val winner = match.winner
 
-            if (winner == null) {
-                listener.onStateChanged(match.id)
-            } else {
-                listener.onMatchEnd(match.id, winner)
+                if (winner == null) {
+                    listener.onStateChanged(match.id)
+                } else {
+                    listener.onMatchEnd(match.id, winner)
+                }
             }
         }
     }
@@ -189,6 +212,62 @@ class MatchHandlerImpl(private val vertx: Vertx) : MatchHandler {
     private fun invokeEventListenersIfAuthorized(match: Match, event: (MatchEventListener) -> Unit) {
         if (match.requiresAuthorization) {
             matchEventListeners.forEach(event)
+        }
+    }
+
+    private fun handlePlayerReadyEvent(match: Match, sockJSSocket: SockJSSocket) {
+        val player = match.players.values.find { it.connection == sockJSSocket }?: throw PlayerNotInMatchException()
+
+        if (match.allPlayersReady()) {
+            return
+        }
+
+        player.ready = true
+        match.dispatchGameState()
+
+        if (match.allPlayersReady()) {
+            countdownAndStartMatch(match.id, 5)
+        }
+    }
+
+    private fun handleKeyDownEvent(match: Match, sockJSSocket: SockJSSocket, action: KeyDownAction) {
+        val player = getPaddleBySocket(match, sockJSSocket)
+
+        when (action.key) {
+            "ArrowUp" -> player.upKeyPressed = true
+            "ArrowDown" -> player.downKeyPressed = true
+        }
+    }
+
+    private fun handleKeyUpEvent(match: Match, sockJSSocket: SockJSSocket, action: KeyUpAction) {
+        val player = getPaddleBySocket(match, sockJSSocket)
+
+        when (action.key) {
+            "ArrowUp" -> player.upKeyPressed = false
+            "ArrowDown" -> player.downKeyPressed = false
+        }
+    }
+
+    private fun getPaddleBySocket(match: Match, sockJSSocket: SockJSSocket): Paddle {
+        val player = match.players.values.find {
+            it.connection.hashCode() == sockJSSocket.hashCode()
+        }?: throw PlayerNotInMatchException()
+
+        return when (player.paddleSide) {
+            PaddleSide.Left -> match.gameState.leftPaddle
+            PaddleSide.Right -> match.gameState.rightPaddle
+        }
+    }
+
+    private fun updateMatchStatsIfAuthorized(match: Match): Future<Unit> {
+        return if (match.requiresAuthorization) {
+            matchStatsRepo.updateMatchStats(match.getMatchStats())
+                .recover {
+                    it.printStackTrace()
+                    Future.failedFuture(it)
+                }
+        } else  {
+            Future.succeededFuture()
         }
     }
 }

@@ -4,6 +4,8 @@ import io.sourceempire.brawlpong.auth.Auth
 import io.sourceempire.brawlpong.handlers.ClientConnectionHandler
 import io.sourceempire.brawlpong.handlers.MatchHandler
 import io.sourceempire.brawlpong.handlers.ServerConnectionHandler
+import io.sourceempire.brawlpong.repos.MatchStatsRepo
+import io.sourceempire.brawlpong.repos.MatchStatsRepoLocal
 import io.sourceempire.brawlpong.utils.getClusterManager
 import io.sourceempire.brawlpong.utils.getEnvProperty
 import io.sourceempire.brawlpong.utils.loadEnv
@@ -39,9 +41,11 @@ class Main: AbstractVerticle() {
         val server = vertx.createHttpServer(HttpServerOptions().setHost(getEnvProperty("THIS_SERVER_URL")).setPort(getEnvProperty("HTTP_PORT").toInt()))
         val router = Router.router(vertx)
         val auth = Auth(vertx)
-        val matchHandler = MatchHandler.create(vertx)
 
-        val serverConnectionHandler = ServerConnectionHandler.create(vertx, matchHandler)
+        val matchStatsRepo = MatchStatsRepoLocal()
+        val matchHandler = MatchHandler.create(vertx, matchStatsRepo)
+
+        val serverConnectionHandler = ServerConnectionHandler.create(vertx, matchHandler, matchStatsRepo)
         matchHandler.registerMatchEventListener(serverConnectionHandler)
 
         ClientConnectionHandler(vertx, router, matchHandler, auth)
