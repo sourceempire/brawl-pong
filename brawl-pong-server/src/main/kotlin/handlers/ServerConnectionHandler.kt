@@ -7,7 +7,6 @@ import io.sourceempire.brawlpong.models.CreateMatchRequest
 import io.sourceempire.brawlpong.repos.MatchStatsRepo
 import io.sourceempire.brawlpong.utils.getEnvProperty
 import io.vertx.core.eventbus.Message
-import io.vertx.core.json.Json
 import io.vertx.kotlin.core.json.jsonObjectOf
 import java.util.*
 
@@ -79,7 +78,7 @@ class ServerConnectionHandlerImpl(
 
     private fun fetchAndReplyMatchStats(matchId: UUID, message: Message<JsonObject>) {
         matchStatsRepo.getMatchStats(matchId).onSuccess { matchStats ->
-            message.reply(Json.encode(matchStats))
+            message.reply(matchStats.toJson())
         }.onFailure {
             it.printStackTrace()
             message.fail(500, it.message)
