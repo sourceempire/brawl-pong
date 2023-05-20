@@ -23,10 +23,11 @@ jar {
 }
 
 shadowJar {
-    mergeServiceFiles()
+    archiveClassifier.set('fat')
     manifest {
         attributes 'Main-Verticle': 'io.sourceempire.brawlpong.Main'
     }
+    mergeServiceFiles()
 }
 
 dependencies {
@@ -47,13 +48,13 @@ dependencies {
     testImplementation "io.vertx:vertx-junit5:4.4.1"
 }
 
-//tasks.register('installPongDependencies', NpmTask) {
-//    args = ['install']
-//    workingDir = file('../brawl-pong-client')
-//}
+tasks.register('installPongDependencies', NpmTask) {
+    args = ['install']
+    workingDir = file('../brawl-pong-client')
+}
 
 tasks.register('buildPong', NpmTask) {
-    // dependsOn installPongDependencies
+    dependsOn installPongDependencies
     args = ['run', 'build']
     workingDir = file('../brawl-pong-client')
 }
